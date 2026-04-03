@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  DONNÉES PAR DÉFAUT
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  DONNÉES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const DEFAULT_MUSCLE_GROUPS = [
   { id: "dos",     label: "Dos",     emoji: "🏋️", color: "#4fc3f7" },
@@ -24,22 +24,65 @@ const DEFAULT_EXERCISES = {
   abdos:   ["Crunchs", "Planche", "Relevé de jambes", "Bicycle", "Russian twist"],
 };
 
-const DEFAULT_THEME = {
-  bg: "#0a0a0a",
-  surface: "#141414",
-  border: "#222222",
-  accent: "#e8ff00",
-  accent2: "#ff4d4d",
-  text: "#f0f0f0",
-  muted: "#555555",
-  success: "#00e676",
-  wallpaperUrl: "",
-  wallpaperOpacity: "0.15",
-};
+// ── Thèmes prédéfinis ──
+const PRESET_THEMES = [
+  {
+    id: "dark",
+    name: "Défaut",
+    emoji: "⚡",
+    bg: "#0a0a0a", surface: "#141414", border: "#222222",
+    accent: "#e8ff00", accent2: "#ff4d4d", text: "#f0f0f0",
+    muted: "#555555", success: "#00e676",
+  },
+  {
+    id: "blue",
+    name: "Bleu Nuit",
+    emoji: "🌊",
+    bg: "#060d1a", surface: "#0d1828", border: "#1a2d45",
+    accent: "#00b4ff", accent2: "#ff6b6b", text: "#e8f4ff",
+    muted: "#4a6080", success: "#00e5a0",
+  },
+  {
+    id: "fire",
+    name: "Rouge Feu",
+    emoji: "🔥",
+    bg: "#0f0500", surface: "#1a0a00", border: "#2d1500",
+    accent: "#ff6b00", accent2: "#ff2244", text: "#fff0e8",
+    muted: "#664422", success: "#ffcc00",
+  },
+  {
+    id: "nature",
+    name: "Vert Nature",
+    emoji: "🌿",
+    bg: "#030d06", surface: "#071a0d", border: "#0f2d18",
+    accent: "#00e676", accent2: "#ff6b6b", text: "#e8fff0",
+    muted: "#2d5540", success: "#69ff47",
+  },
+  {
+    id: "purple",
+    name: "Violet Cosmos",
+    emoji: "🌌",
+    bg: "#080510", surface: "#110d1e", border: "#1e1535",
+    accent: "#b47cff", accent2: "#ff4d8b", text: "#f0e8ff",
+    muted: "#4a3870", success: "#00e5c8",
+  },
+  {
+    id: "light",
+    name: "Clair",
+    emoji: "☀️",
+    bg: "#f5f5f5", surface: "#ffffff", border: "#e0e0e0",
+    accent: "#1a73e8", accent2: "#e53935", text: "#1a1a1a",
+    muted: "#888888", success: "#00c853",
+  },
+];
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const DEFAULT_THEME = { ...PRESET_THEMES[0], wallpaperUrl: "", wallpaperOpacity: "0.15" };
+
+const REST_PRESETS = [60, 90, 120, 180];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  UTILITAIRES
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
@@ -49,24 +92,44 @@ function formatTime(iso) {
 }
 function pad(n) { return String(n).padStart(2, "0"); }
 
-const REST_PRESETS = [60, 90, 120, 180];
+function formatDuration(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${pad(m)}min`;
+  if (m > 0) return `${m}min ${pad(s)}s`;
+  return `${s}s`;
+}
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function getLast30Days() {
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toDateString());
+  }
+  return days;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  COMPOSANT PRINCIPAL
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export default function WorkoutCounter() {
 
-  // ── État général ──
+  // ── Setup ──
   const [step, setStep] = useState("groups");
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
   const [totalSets, setTotalSets] = useState(3);
   const [targetReps, setTargetReps] = useState(10);
 
-  // ── Exercices personnalisés (ajout/suppression dans l'app) ──
+  // ── Exercices ──
   const [customExercises, setCustomExercises] = useState(() => {
     try { return JSON.parse(localStorage.getItem("rc-custom-exercises") || "{}"); } catch { return {}; }
+  });
+  const [editableExercises, setEditableExercises] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("rc-exercises") || "null") || DEFAULT_EXERCISES; } catch { return DEFAULT_EXERCISES; }
   });
   const [customInput, setCustomInput] = useState("");
   const [customGroup, setCustomGroup] = useState(null);
@@ -76,6 +139,12 @@ export default function WorkoutCounter() {
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
   const [repInput, setRepInput] = useState("");
+  const [sessionNote, setSessionNote] = useState("");
+
+  // ── Minuteur de séance ──
+  const [sessionSeconds, setSessionSeconds] = useState(0);
+  const [sessionTimerActive, setSessionTimerActive] = useState(false);
+  const sessionTimerRef = useRef(null);
 
   // ── Repos ──
   const [showRest, setShowRest] = useState(false);
@@ -90,35 +159,27 @@ export default function WorkoutCounter() {
   const [history, setHistory] = useState([]);
   const [openSession, setOpenSession] = useState(null);
 
-  // ── Thème et personnalisation ──
+  // ── Paramètres ──
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("themes");
   const [theme, setTheme] = useState(() => {
     try { return { ...DEFAULT_THEME, ...JSON.parse(localStorage.getItem("rc-theme") || "{}") }; }
     catch { return DEFAULT_THEME; }
   });
-  const [wallpaperInput, setWallpaperInput] = useState(theme.wallpaperUrl || "");
-  const [settingsTab, setSettingsTab] = useState("theme");
+  const [wallpaperInput, setWallpaperInput] = useState("");
   const [editingGroup, setEditingGroup] = useState(null);
   const [newExInput, setNewExInput] = useState("");
 
-  // ── Exercices de l'éditeur (copie locale pour édition) ──
-  const [editableExercises, setEditableExercises] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("rc-exercises") || "null");
-      return saved || DEFAULT_EXERCISES;
-    } catch { return DEFAULT_EXERCISES; }
-  });
+  // ── Graphiques ──
+  const [showStats, setShowStats] = useState(false);
+  const [statsGroup, setStatsGroup] = useState("all");
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  EFFETS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  // Charger l'historique
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("rc-history") || "[]");
-      setHistory(saved);
-    } catch {}
+    try { setHistory(JSON.parse(localStorage.getItem("rc-history") || "[]")); } catch {}
   }, []);
 
   // Timer de repos
@@ -128,6 +189,8 @@ export default function WorkoutCounter() {
         setRestRemaining(r => {
           if (r <= 1) {
             clearInterval(restInterval.current);
+            // Vibration à la fin du repos
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
             setTimeout(() => finishRest(), 400);
             return 0;
           }
@@ -140,282 +203,460 @@ export default function WorkoutCounter() {
     return () => clearInterval(restInterval.current);
   }, [showRest, restPaused]);
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Minuteur de séance
+  useEffect(() => {
+    if (sessionTimerActive) {
+      sessionTimerRef.current = setInterval(() => {
+        setSessionSeconds(s => s + 1);
+      }, 1000);
+    } else {
+      clearInterval(sessionTimerRef.current);
+    }
+    return () => clearInterval(sessionTimerRef.current);
+  }, [sessionTimerActive]);
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  SAUVEGARDE
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  function saveHistory(newHistory) {
-    localStorage.setItem("rc-history", JSON.stringify(newHistory));
-    setHistory(newHistory);
-  }
+  function saveHistory(h) { localStorage.setItem("rc-history", JSON.stringify(h)); setHistory(h); }
+  function saveTheme(t) { localStorage.setItem("rc-theme", JSON.stringify(t)); setTheme(t); }
+  function saveExercises(e) { localStorage.setItem("rc-exercises", JSON.stringify(e)); setEditableExercises(e); }
+  function saveCustomExercises(c) { localStorage.setItem("rc-custom-exercises", JSON.stringify(c)); setCustomExercises(c); }
 
-  function saveTheme(newTheme) {
-    localStorage.setItem("rc-theme", JSON.stringify(newTheme));
-    setTheme(newTheme);
-  }
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  CSS DYNAMIQUE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  function saveExercises(newExercises) {
-    localStorage.setItem("rc-exercises", JSON.stringify(newExercises));
-    setEditableExercises(newExercises);
-  }
+  const isBgLight = theme.bg === "#f5f5f5";
+  const cardBg = isBgLight ? "#ffffff" : theme.surface;
+  const inputBg = isBgLight ? "#f0f0f0" : "#111111";
+  const planItemBg = isBgLight ? "#f8f8f8" : "#0f0f0f";
 
-  function saveCustomExercises(newCustom) {
-    localStorage.setItem("rc-custom-exercises", JSON.stringify(newCustom));
-    setCustomExercises(newCustom);
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  CSS DYNAMIQUE (thème)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  const dynamicCss = `
+  const css = `
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: ${theme.bg};
-      --surface: ${theme.surface};
-      --border: ${theme.border};
-      --accent: ${theme.accent};
-      --accent2: ${theme.accent2};
-      --text: ${theme.text};
-      --muted: ${theme.muted};
-      --success: ${theme.success};
+      --bg: ${theme.bg}; --surface: ${cardBg}; --border: ${theme.border};
+      --accent: ${theme.accent}; --accent2: ${theme.accent2};
+      --text: ${theme.text}; --muted: ${theme.muted}; --success: ${theme.success};
     }
     body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
-    .app {
-      min-height: 100vh;
-      background: var(--bg);
-      display: flex; flex-direction: column; align-items: center;
-      padding: 24px 16px 48px;
-      position: relative;
-    }
-    ${theme.wallpaperUrl ? `
-    .app::before {
-      content: '';
-      position: fixed; inset: 0; z-index: 0;
-      background-image: url('${theme.wallpaperUrl}');
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-      opacity: ${theme.wallpaperOpacity};
-      pointer-events: none;
-    }` : ""}
+
+    .app { min-height: 100vh; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 24px 16px 48px; position: relative; }
+    ${theme.wallpaperUrl ? `.app::before { content:''; position:fixed; inset:0; z-index:0; background-image:url('${theme.wallpaperUrl}'); background-size:cover; background-position:center; background-attachment:fixed; opacity:${theme.wallpaperOpacity}; pointer-events:none; }` : ""}
     .app > * { position: relative; z-index: 1; }
 
-    .header { width: 100%; max-width: 420px; margin-bottom: 20px; display: flex; align-items: flex-start; justify-content: space-between; }
-    .header-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
-    .header-title { font-family: 'Bebas Neue', sans-serif; font-size: 52px; line-height: 1; color: var(--text); }
-    .icon-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: transparent; border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; color: var(--muted); cursor: pointer; font-size: 11px; font-family: 'DM Sans', sans-serif; transition: all 0.13s; }
-    .icon-btn:hover { border-color: #444; color: var(--text); }
-    .icon-btn.active { border-color: var(--accent); color: var(--accent); }
-    .icon-btn .ib-icon { font-size: 16px; }
-    .header-actions { display: flex; gap: 8px; }
+    .header { width:100%; max-width:420px; margin-bottom:20px; display:flex; align-items:flex-start; justify-content:space-between; }
+    .header-label { font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
+    .header-title { font-family:'Bebas Neue',sans-serif; font-size:52px; line-height:1; color:var(--text); }
+    .header-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .icon-btn { display:flex; flex-direction:column; align-items:center; gap:3px; background:transparent; border:1px solid var(--border); border-radius:10px; padding:8px 12px; color:var(--muted); cursor:pointer; font-size:11px; font-family:'DM Sans',sans-serif; transition:all 0.13s; }
+    .icon-btn:hover { border-color:#444; color:var(--text); }
+    .icon-btn.active { border-color:var(--accent); color:var(--accent); }
+    .icon-btn .ib-icon { font-size:15px; }
 
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 420px; padding: 20px; margin-bottom: 12px; }
-    .section-title { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+    /* Minuteur */
+    .session-timer { width:100%; max-width:420px; display:flex; align-items:center; gap:8px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:12px; }
+    .timer-icon { font-size:14px; }
+    .timer-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; flex:1; }
+    .timer-val { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--accent); }
 
-    .group-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    .group-btn { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 6px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; font-family: 'DM Sans', sans-serif; transition: all 0.13s; position: relative; }
-    .group-btn .g-emoji { font-size: 20px; }
-    .group-btn:hover { border-color: #444; color: var(--text); }
-    .group-btn.selected { border-color: var(--g-color, var(--accent)); color: var(--g-color, var(--accent)); background: color-mix(in srgb, var(--g-color, var(--accent)) 8%, transparent); }
-    .group-btn.selected::after { content: '✓'; position: absolute; top: 4px; right: 6px; font-size: 10px; color: var(--g-color, var(--accent)); }
-    .group-hint { font-size: 11px; color: var(--muted); margin-top: 10px; text-align: center; }
-    .group-hint span { color: var(--accent); }
-    .tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-    .tag { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; border: 1px solid; font-size: 12px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%; max-width:420px; padding:20px; margin-bottom:12px; }
+    .section-title { font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
 
-    .ex-list { display: flex; flex-direction: column; gap: 6px; }
-    .ex-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: #0f0f0f; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.13s; }
-    .ex-item:hover { border-color: #333; }
-    .ex-item.selected { border-color: var(--accent); background: rgba(232,255,0,0.04); }
-    .ex-item-dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--muted); background: transparent; flex-shrink: 0; transition: all 0.13s; }
-    .ex-item.selected .ex-item-dot { background: var(--accent); border-color: var(--accent); }
-    .ex-item-label { font-size: 14px; flex: 1; }
-    .ex-item-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; transition: color 0.13s; }
-    .ex-item-del:hover { color: var(--accent2); }
-    .add-custom-row { display: flex; gap: 8px; margin-top: 10px; }
-    .custom-input { flex: 1; background: #111; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 10px 14px; outline: none; transition: border 0.13s; }
-    .custom-input:focus { border-color: var(--accent); }
-    .custom-input::placeholder { color: var(--muted); }
-    .add-btn { background: var(--accent); border: none; border-radius: 8px; color: #0a0a0a; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 700; padding: 0 16px; cursor: pointer; white-space: nowrap; transition: opacity 0.13s; }
-    .add-btn:hover { opacity: 0.85; }
-    .add-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .group-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .group-btn { display:flex; flex-direction:column; align-items:center; gap:5px; padding:12px 6px; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-size:12px; font-family:'DM Sans',sans-serif; transition:all 0.13s; position:relative; }
+    .group-btn .g-emoji { font-size:20px; }
+    .group-btn:hover { border-color:#444; color:var(--text); }
+    .group-btn.selected { border-color:var(--g-color,var(--accent)); color:var(--g-color,var(--accent)); background:color-mix(in srgb,var(--g-color,var(--accent)) 8%,transparent); }
+    .group-btn.selected::after { content:'✓'; position:absolute; top:4px; right:6px; font-size:10px; color:var(--g-color,var(--accent)); }
+    .group-hint { font-size:11px; color:var(--muted); margin-top:10px; text-align:center; }
+    .group-hint span { color:var(--accent); }
+    .tag-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+    .tag { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; border:1px solid; font-size:12px; }
 
-    .config-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-    .config-label { font-size: 12px; color: var(--muted); flex: 1; text-transform: uppercase; letter-spacing: 0.1em; }
-    .stepper { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-    .stepper-btn { background: #1a1a1a; border: none; color: var(--text); width: 36px; height: 36px; font-size: 18px; cursor: pointer; transition: background 0.13s; }
-    .stepper-btn:hover { background: #252525; }
-    .stepper-val { width: 52px; text-align: center; font-size: 15px; font-weight: 600; background: #111; color: var(--text); display: flex; align-items: center; justify-content: center; }
+    .ex-list { display:flex; flex-direction:column; gap:6px; }
+    .ex-item { display:flex; align-items:center; gap:10px; padding:11px 14px; background:${planItemBg}; border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:all 0.13s; }
+    .ex-item:hover { border-color:#333; }
+    .ex-item.selected { border-color:var(--accent); }
+    .ex-item-dot { width:8px; height:8px; border-radius:50%; border:1.5px solid var(--muted); background:transparent; flex-shrink:0; transition:all 0.13s; }
+    .ex-item.selected .ex-item-dot { background:var(--accent); border-color:var(--accent); }
+    .ex-item-label { font-size:14px; flex:1; }
+    .ex-item-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:0 4px; }
+    .ex-item-del:hover { color:var(--accent2); }
+    .add-custom-row { display:flex; gap:8px; margin-top:10px; }
+    .custom-input { flex:1; background:${inputBg}; border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; padding:10px 14px; outline:none; transition:border 0.13s; }
+    .custom-input:focus { border-color:var(--accent); }
+    .custom-input::placeholder { color:var(--muted); }
+    .add-btn { background:var(--accent); border:none; border-radius:8px; color:#0a0a0a; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700; padding:0 16px; cursor:pointer; white-space:nowrap; }
+    .add-btn:disabled { opacity:0.3; cursor:not-allowed; }
 
-    .plan-list { display: flex; flex-direction: column; gap: 8px; }
-    .plan-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #0f0f0f; border: 1px solid var(--border); border-radius: 10px; transition: all 0.13s; }
-    .plan-item.active-plan { border-color: var(--accent); background: rgba(232,255,0,0.03); }
-    .plan-item.done-plan { border-color: #1a2a1a; background: #0d170d; }
-    .plan-idx { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--muted); width: 20px; }
-    .plan-item.active-plan .plan-idx { color: var(--accent); }
-    .plan-info { flex: 1; min-width: 0; }
-    .plan-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .plan-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .plan-status { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
-    .plan-status.pending { color: var(--muted); }
-    .plan-status.active { color: var(--accent); }
-    .plan-status.done { color: var(--success); }
+    .config-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    .config-label { font-size:12px; color:var(--muted); flex:1; text-transform:uppercase; letter-spacing:0.1em; }
+    .stepper { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+    .stepper-btn { background:${planItemBg}; border:none; color:var(--text); width:36px; height:36px; font-size:18px; cursor:pointer; }
+    .stepper-val { width:52px; text-align:center; font-size:15px; font-weight:600; background:${inputBg}; color:var(--text); display:flex; align-items:center; justify-content:center; }
 
-    .start-btn { width: 100%; height: 58px; border-radius: 12px; border: none; background: var(--accent); color: #0a0a0a; font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.08em; cursor: pointer; margin-top: 16px; transition: opacity 0.13s; }
-    .start-btn:hover { opacity: 0.88; }
-    .start-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .reset-btn { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 10px 18px; cursor: pointer; transition: all 0.13s; }
-    .reset-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-    .validate-btn { width: 100%; height: 56px; border-radius: 12px; border: 2px solid var(--success); background: transparent; color: var(--success); font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 0.08em; cursor: pointer; transition: all 0.13s; }
-    .validate-btn:hover { background: rgba(0,230,118,0.07); }
-    .validate-btn:disabled { opacity: 0.25; cursor: not-allowed; border-color: var(--muted); color: var(--muted); }
+    .plan-list { display:flex; flex-direction:column; gap:8px; }
+    .plan-item { display:flex; align-items:center; gap:10px; padding:12px 14px; background:${planItemBg}; border:1px solid var(--border); border-radius:10px; }
+    .plan-item.active-plan { border-color:var(--accent); }
+    .plan-item.done-plan { opacity:0.5; }
+    .plan-idx { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--muted); width:20px; }
+    .plan-item.active-plan .plan-idx { color:var(--accent); }
+    .plan-info { flex:1; min-width:0; }
+    .plan-name { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .plan-detail { font-size:11px; color:var(--muted); margin-top:2px; }
+    .plan-status { font-size:10px; font-weight:600; text-transform:uppercase; }
+    .plan-status.pending { color:var(--muted); }
+    .plan-status.active { color:var(--accent); }
+    .plan-status.done { color:var(--success); }
 
-    .step-nav { display: flex; gap: 6px; margin-bottom: 20px; width: 100%; max-width: 420px; }
-    .step-pip { height: 3px; flex: 1; border-radius: 2px; background: var(--border); transition: background 0.3s; }
-    .step-pip.done-pip { background: var(--success); }
-    .step-pip.active-pip { background: var(--accent); }
-    .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+    .start-btn { width:100%; height:58px; border-radius:12px; border:none; background:var(--accent); color:#0a0a0a; font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.08em; cursor:pointer; margin-top:16px; }
+    .start-btn:disabled { opacity:0.3; cursor:not-allowed; }
+    .reset-btn { background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:13px; padding:10px 18px; cursor:pointer; }
+    .reset-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+    .validate-btn { width:100%; height:56px; border-radius:12px; border:2px solid var(--success); background:transparent; color:var(--success); font-family:'Bebas Neue',sans-serif; font-size:20px; cursor:pointer; }
+    .validate-btn:disabled { opacity:0.25; cursor:not-allowed; border-color:var(--muted); color:var(--muted); }
 
-    .workout-ex-header { display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; }
-    .workout-ex-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
-    .workout-ex-name { font-family: 'Bebas Neue', sans-serif; font-size: 32px; line-height: 1.05; }
-    .set-track { display: flex; gap: 8px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
-    .set-bubble { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 36px; }
-    .set-bubble-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #333; background: transparent; transition: all 0.2s; }
-    .set-bubble-dot.done { background: var(--success); border-color: var(--success); }
-    .set-bubble-dot.active { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px var(--accent); }
-    .set-bubble-reps { font-size: 10px; color: var(--muted); min-height: 14px; }
-    .set-bubble-reps.filled { color: var(--success); font-weight: 600; }
-    .go-zone { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px 0; }
-    .go-label { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
-    .go-serie-num { font-family: 'Bebas Neue', sans-serif; font-size: 72px; line-height: 1; color: var(--accent); }
-    .go-target { font-size: 13px; color: var(--muted); }
-    .go-target span { color: var(--text); font-weight: 600; }
-    .rep-entry-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; text-align: center; }
-    .rep-numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-    .np-btn { height: 56px; border-radius: 10px; border: 1px solid var(--border); background: #111; color: var(--text); font-family: 'Bebas Neue', sans-serif; font-size: 24px; cursor: pointer; transition: all 0.1s; }
-    .np-btn:hover { background: #1a1a1a; border-color: #333; }
-    .np-btn:active { transform: scale(0.95); }
-    .np-btn.del { font-size: 18px; color: var(--muted); }
-    .np-btn.del:hover { color: var(--accent2); border-color: var(--accent2); }
-    .np-btn.zero { grid-column: span 2; }
-    .rep-display-val { font-family: 'Bebas Neue', sans-serif; font-size: 80px; line-height: 1; text-align: center; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.02em; }
-    .rep-display-val.has-val { color: var(--accent); }
+    .step-nav { display:flex; gap:6px; margin-bottom:20px; width:100%; max-width:420px; }
+    .step-pip { height:3px; flex:1; border-radius:2px; background:var(--border); transition:background 0.3s; }
+    .step-pip.done-pip { background:var(--success); }
+    .step-pip.active-pip { background:var(--accent); }
+    .divider { border:none; border-top:1px solid var(--border); margin:14px 0; }
 
-    .rest-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(5,5,5,0.97); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .rest-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-    .rest-exercise { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--text); margin-bottom: 28px; text-align: center; }
-    .rest-ring-wrap { position: relative; width: 220px; height: 220px; margin-bottom: 28px; }
-    .rest-ring-svg { transform: rotate(-90deg); }
-    .rest-ring-bg { fill: none; stroke: #1a1a1a; stroke-width: 8; }
-    .rest-ring-prog { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
-    .rest-ring-prog.warning { stroke: var(--accent2); }
-    .rest-time-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .rest-countdown { font-family: 'Bebas Neue', sans-serif; font-size: 72px; line-height: 1; letter-spacing: 0.02em; color: var(--accent); }
-    .rest-countdown.warning { color: var(--accent2); }
-    .rest-of { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .rest-controls { display: flex; gap: 12px; width: 100%; max-width: 340px; margin-bottom: 24px; }
-    .rest-ctrl-btn { flex: 1; height: 52px; border-radius: 12px; border: 1px solid var(--border); background: #111; color: var(--text); font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 0.06em; cursor: pointer; transition: all 0.13s; }
-    .rest-ctrl-btn:hover { border-color: #444; }
-    .rest-ctrl-btn.primary { background: var(--accent); border-color: var(--accent); color: #0a0a0a; }
-    .rest-ctrl-btn.primary:hover { opacity: 0.88; }
-    .rest-duration-row { display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: #111; border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 340px; }
-    .rest-duration-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
-    .rest-presets { display: flex; gap: 6px; }
-    .rest-preset-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 5px 10px; cursor: pointer; transition: all 0.13s; }
-    .rest-preset-btn:hover { border-color: #444; color: var(--text); }
-    .rest-preset-btn.active-preset { border-color: var(--accent); color: var(--accent); }
-    .rest-skip { font-size: 12px; color: var(--muted); text-decoration: underline; cursor: pointer; background: none; border: none; margin-top: 8px; }
-    .rest-skip:hover { color: var(--text); }
+    .workout-ex-header { display:flex; flex-direction:column; gap:2px; margin-bottom:20px; }
+    .workout-ex-label { font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); }
+    .workout-ex-name { font-family:'Bebas Neue',sans-serif; font-size:32px; line-height:1.05; }
+    .set-track { display:flex; gap:8px; align-items:center; margin-bottom:24px; flex-wrap:wrap; }
+    .set-bubble { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:36px; }
+    .set-bubble-dot { width:12px; height:12px; border-radius:50%; border:2px solid #333; background:transparent; transition:all 0.2s; }
+    .set-bubble-dot.done { background:var(--success); border-color:var(--success); }
+    .set-bubble-dot.active { background:var(--accent); border-color:var(--accent); box-shadow:0 0 8px var(--accent); }
+    .set-bubble-reps { font-size:10px; color:var(--muted); min-height:14px; }
+    .set-bubble-reps.filled { color:var(--success); font-weight:600; }
+    .go-zone { display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px 0; }
+    .go-label { font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); }
+    .go-serie-num { font-family:'Bebas Neue',sans-serif; font-size:72px; line-height:1; color:var(--accent); }
+    .go-target { font-size:13px; color:var(--muted); }
+    .go-target span { color:var(--text); font-weight:600; }
+    .rep-entry-label { font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; text-align:center; }
+    .rep-numpad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+    .np-btn { height:56px; border-radius:10px; border:1px solid var(--border); background:${inputBg}; color:var(--text); font-family:'Bebas Neue',sans-serif; font-size:24px; cursor:pointer; transition:all 0.1s; }
+    .np-btn:hover { background:var(--border); }
+    .np-btn:active { transform:scale(0.95); }
+    .np-btn.del { font-size:18px; color:var(--muted); }
+    .np-btn.zero { grid-column:span 2; }
+    .rep-display-val { font-family:'Bebas Neue',sans-serif; font-size:80px; line-height:1; text-align:center; color:var(--muted); margin-bottom:8px; }
+    .rep-display-val.has-val { color:var(--accent); }
 
-    .done-screen { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; }
-    .done-emoji { font-size: 56px; }
-    .done-title { font-family: 'Bebas Neue', sans-serif; font-size: 44px; color: var(--success); }
-    .done-sub { font-size: 13px; color: var(--muted); line-height: 1.6; }
-    .done-stats { display: flex; gap: 10px; margin-top: 4px; }
-    .done-stat { background: #111; border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; text-align: center; }
-    .done-stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--accent); }
-    .done-stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+    /* Record badge */
+    .record-badge { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; background:rgba(255,204,0,0.12); border:1px solid #ffcc00; border-radius:20px; font-size:12px; color:#ffcc00; font-weight:600; margin-bottom:12px; animation:pulse 1.5s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
 
-    .hist-empty { text-align: center; padding: 40px 0; color: var(--muted); font-size: 14px; }
-    .hist-empty-icon { font-size: 40px; margin-bottom: 10px; }
-    .hist-day { margin-bottom: 24px; }
-    .hist-day-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-    .hist-session { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: all 0.13s; }
-    .hist-session:hover { border-color: #333; }
-    .hist-session.open { border-color: var(--accent); }
-    .hist-session-top { display: flex; align-items: center; gap: 10px; }
-    .hist-session-tags { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; }
-    .hist-stag { font-size: 11px; padding: 2px 8px; border-radius: 20px; border: 1px solid; font-weight: 500; }
-    .hist-session-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-    .hist-session-time { font-size: 11px; color: var(--muted); }
-    .hist-session-reps { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--accent); }
-    .hist-detail { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
-    .hist-ex { display: flex; flex-direction: column; gap: 4px; }
-    .hist-ex-name { font-size: 13px; font-weight: 600; color: var(--text); }
-    .hist-sets-row { display: flex; gap: 6px; flex-wrap: wrap; }
-    .hist-set-chip { background: #111; border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 12px; color: var(--muted); }
-    .hist-ex-total { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .del-session-btn { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
-    .del-session-btn:hover { color: var(--accent2); }
+    /* Note séance */
+    .note-area { width:100%; background:${inputBg}; border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; padding:12px 14px; outline:none; resize:vertical; min-height:80px; margin-top:8px; }
+    .note-area:focus { border-color:var(--accent); }
+    .note-area::placeholder { color:var(--muted); }
 
-    /* ── PARAMÈTRES ── */
-    .settings-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85); display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s ease; }
-    .settings-panel { background: #111; border: 1px solid var(--border); border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto; padding: 24px 20px 40px; }
-    .settings-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
-    .settings-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; margin-bottom: 16px; }
-    .settings-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-    .stab { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; transition: all 0.13s; }
-    .stab.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.06); }
-    .color-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 10px 14px; background: var(--surface); border-radius: 10px; border: 1px solid var(--border); }
-    .color-label { flex: 1; font-size: 13px; color: var(--text); }
-    .color-desc { font-size: 11px; color: var(--muted); }
-    .color-picker { width: 40px; height: 40px; border: none; border-radius: 8px; cursor: pointer; padding: 2px; background: transparent; }
-    .color-reset-btn { background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 11px; padding: 4px 8px; cursor: pointer; white-space: nowrap; }
-    .color-reset-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-    .wallpaper-section { margin-bottom: 16px; }
-    .wallpaper-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 10px 14px; outline: none; margin-bottom: 8px; }
-    .wallpaper-input:focus { border-color: var(--accent); }
-    .wallpaper-input::placeholder { color: var(--muted); }
-    .wallpaper-preview { width: 100%; height: 120px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 8px; position: relative; }
-    .wallpaper-preview img { width: 100%; height: 100%; object-fit: cover; }
-    .wallpaper-preview-empty { font-size: 12px; color: var(--muted); }
-    .opacity-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .opacity-label { font-size: 12px; color: var(--muted); flex: 1; }
-    .opacity-val { font-size: 13px; color: var(--accent); width: 36px; text-align: right; }
-    .opacity-slider { flex: 2; accent-color: var(--accent); }
-    .apply-wall-btn { width: 100%; height: 44px; border-radius: 10px; border: none; background: var(--accent); color: #0a0a0a; font-family: 'Bebas Neue', sans-serif; font-size: 18px; cursor: pointer; }
-    .remove-wall-btn { width: 100%; height: 40px; border-radius: 10px; border: 1px solid var(--accent2); background: transparent; color: var(--accent2); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; margin-top: 8px; }
-    .ex-editor-group { margin-bottom: 20px; }
-    .ex-editor-group-header { display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; }
-    .ex-editor-group-title { font-size: 13px; font-weight: 600; flex: 1; }
-    .ex-editor-group-count { font-size: 11px; color: var(--muted); }
-    .ex-editor-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; }
-    .ex-editor-name { flex: 1; font-size: 13px; color: var(--text); }
-    .ex-editor-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 4px; }
-    .ex-editor-del:hover { color: var(--accent2); }
-    .ex-add-row { display: flex; gap: 6px; margin-top: 8px; }
-    .ex-add-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; padding: 8px 12px; outline: none; font-family: 'DM Sans', sans-serif; }
-    .ex-add-input:focus { border-color: var(--accent); }
-    .ex-add-input::placeholder { color: var(--muted); }
-    .ex-add-btn { background: var(--accent); border: none; border-radius: 8px; color: #0a0a0a; font-size: 12px; font-weight: 700; padding: 0 14px; cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
-    .ex-add-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .reset-all-btn { width: 100%; height: 44px; border-radius: 10px; border: 1px solid var(--accent2); background: transparent; color: var(--accent2); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; margin-top: 8px; }
+    /* Repos */
+    .rest-overlay { position:fixed; inset:0; z-index:100; background:rgba(5,5,5,0.97); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; animation:fadeIn 0.2s ease; }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .rest-title { font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+    .rest-exercise { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--text); margin-bottom:28px; text-align:center; }
+    .rest-ring-wrap { position:relative; width:220px; height:220px; margin-bottom:28px; }
+    .rest-ring-svg { transform:rotate(-90deg); }
+    .rest-ring-bg { fill:none; stroke:#1a1a1a; stroke-width:8; }
+    .rest-ring-prog { fill:none; stroke:var(--accent); stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset 1s linear; }
+    .rest-ring-prog.warning { stroke:var(--accent2); }
+    .rest-time-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .rest-countdown { font-family:'Bebas Neue',sans-serif; font-size:72px; line-height:1; color:var(--accent); }
+    .rest-countdown.warning { color:var(--accent2); }
+    .rest-of { font-size:12px; color:var(--muted); margin-top:2px; }
+    .rest-controls { display:flex; gap:12px; width:100%; max-width:340px; margin-bottom:24px; }
+    .rest-ctrl-btn { flex:1; height:52px; border-radius:12px; border:1px solid var(--border); background:#111; color:var(--text); font-family:'Bebas Neue',sans-serif; font-size:18px; cursor:pointer; }
+    .rest-ctrl-btn.primary { background:var(--accent); border-color:var(--accent); color:#0a0a0a; }
+    .rest-duration-row { display:flex; align-items:center; gap:12px; padding:14px 20px; background:#111; border:1px solid var(--border); border-radius:12px; width:100%; max-width:340px; }
+    .rest-duration-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; }
+    .rest-presets { display:flex; gap:6px; }
+    .rest-preset-btn { background:transparent; border:1px solid var(--border); border-radius:6px; color:var(--muted); font-size:12px; font-weight:500; padding:5px 10px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .rest-preset-btn.active-preset { border-color:var(--accent); color:var(--accent); }
+    .rest-skip { font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer; background:none; border:none; margin-top:8px; }
+
+    /* Terminé */
+    .done-screen { display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; }
+    .done-emoji { font-size:56px; }
+    .done-title { font-family:'Bebas Neue',sans-serif; font-size:44px; color:var(--success); }
+    .done-sub { font-size:13px; color:var(--muted); line-height:1.6; }
+    .done-stats { display:flex; gap:10px; margin-top:4px; flex-wrap:wrap; justify-content:center; }
+    .done-stat { background:${inputBg}; border:1px solid var(--border); border-radius:10px; padding:12px 18px; text-align:center; }
+    .done-stat-val { font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--accent); }
+    .done-stat-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-top:2px; }
+
+    /* Historique */
+    .hist-empty { text-align:center; padding:40px 0; color:var(--muted); font-size:14px; }
+    .hist-empty-icon { font-size:40px; margin-bottom:10px; }
+    .hist-day { margin-bottom:24px; }
+    .hist-day-label { font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+    .hist-session { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:8px; cursor:pointer; }
+    .hist-session.open { border-color:var(--accent); }
+    .hist-session-top { display:flex; align-items:center; gap:10px; }
+    .hist-session-tags { display:flex; gap:5px; flex-wrap:wrap; flex:1; }
+    .hist-stag { font-size:11px; padding:2px 8px; border-radius:20px; border:1px solid; font-weight:500; }
+    .hist-session-meta { display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
+    .hist-session-time { font-size:11px; color:var(--muted); }
+    .hist-session-reps { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--accent); }
+    .hist-detail { margin-top:14px; padding-top:14px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:10px; }
+    .hist-ex-name { font-size:13px; font-weight:600; color:var(--text); }
+    .hist-sets-row { display:flex; gap:6px; flex-wrap:wrap; }
+    .hist-set-chip { background:${inputBg}; border:1px solid var(--border); border-radius:6px; padding:3px 8px; font-size:12px; color:var(--muted); }
+    .hist-note { font-size:12px; color:var(--muted); font-style:italic; padding:8px 12px; background:${inputBg}; border-radius:8px; border-left:3px solid var(--accent); }
+    .del-session-btn { background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer; text-decoration:underline; padding:0; }
+    .del-session-btn:hover { color:var(--accent2); }
+
+    /* Paramètres */
+    .settings-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.85); display:flex; align-items:flex-end; justify-content:center; animation:fadeIn 0.2s ease; }
+    .settings-panel { background:#111; border:1px solid var(--border); border-radius:20px 20px 0 0; width:100%; max-width:480px; max-height:88vh; overflow-y:auto; padding:24px 20px 40px; }
+    .settings-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
+    .settings-title { font-family:'Bebas Neue',sans-serif; font-size:28px; margin-bottom:16px; }
+    .settings-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+    .stab { flex:1; min-width:80px; padding:8px 6px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:11px; cursor:pointer; }
+    .stab.active { border-color:var(--accent); color:var(--accent); background:rgba(232,255,0,0.06); }
+
+    /* Thèmes prédéfinis */
+    .themes-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+    .theme-card { border-radius:12px; border:2px solid transparent; cursor:pointer; overflow:hidden; transition:all 0.15s; }
+    .theme-card.selected-theme { border-color:var(--accent); }
+    .theme-preview { height:52px; display:flex; flex-direction:column; justify-content:flex-end; padding:6px 8px; position:relative; }
+    .theme-accent-strip { position:absolute; top:0; left:0; right:0; height:4px; }
+    .theme-name { font-size:11px; font-weight:600; margin-top:4px; }
+    .theme-emoji { font-size:18px; }
+
+    /* Couleurs manuelles */
+    .color-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; padding:10px 14px; background:var(--surface); border-radius:10px; border:1px solid var(--border); }
+    .color-label { flex:1; font-size:13px; color:var(--text); }
+    .color-desc { font-size:11px; color:var(--muted); }
+    .color-picker { width:40px; height:40px; border:none; border-radius:8px; cursor:pointer; padding:2px; background:transparent; }
+    .wallpaper-input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; padding:10px 14px; outline:none; margin-bottom:8px; }
+    .wallpaper-input:focus { border-color:var(--accent); }
+    .wallpaper-input::placeholder { color:var(--muted); }
+    .wallpaper-preview { width:100%; height:110px; border-radius:10px; border:1px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:8px; }
+    .wallpaper-preview img { width:100%; height:100%; object-fit:cover; }
+    .opacity-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .opacity-label { font-size:12px; color:var(--muted); flex:1; }
+    .opacity-val { font-size:13px; color:var(--accent); width:36px; text-align:right; }
+    .opacity-slider { flex:2; accent-color:var(--accent); }
+    .apply-wall-btn { width:100%; height:44px; border-radius:10px; border:none; background:var(--accent); color:#0a0a0a; font-family:'Bebas Neue',sans-serif; font-size:18px; cursor:pointer; }
+    .remove-wall-btn { width:100%; height:40px; border-radius:10px; border:1px solid var(--accent2); background:transparent; color:var(--accent2); font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; margin-top:8px; }
+    .reset-all-btn { width:100%; height:44px; border-radius:10px; border:1px solid var(--accent2); background:transparent; color:var(--accent2); font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; margin-top:8px; }
+
+    /* Éditeur exercices */
+    .ex-editor-group { margin-bottom:16px; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+    .ex-editor-group-header { display:flex; align-items:center; gap:8px; padding:12px 14px; cursor:pointer; background:var(--surface); }
+    .ex-editor-group-title { font-size:13px; font-weight:600; flex:1; }
+    .ex-editor-group-count { font-size:11px; color:var(--muted); }
+    .ex-editor-body { padding:10px 14px 14px; }
+    .ex-editor-item { display:flex; align-items:center; gap:8px; padding:7px 10px; background:${inputBg}; border:1px solid var(--border); border-radius:8px; margin-bottom:5px; }
+    .ex-editor-name { flex:1; font-size:13px; }
+    .ex-editor-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:0 4px; }
+    .ex-editor-del:hover { color:var(--accent2); }
+    .ex-add-row { display:flex; gap:6px; margin-top:8px; }
+    .ex-add-input { flex:1; background:${inputBg}; border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px; padding:8px 12px; outline:none; font-family:'DM Sans',sans-serif; }
+    .ex-add-input:focus { border-color:var(--accent); }
+    .ex-add-input::placeholder { color:var(--muted); }
+    .ex-add-btn { background:var(--accent); border:none; border-radius:8px; color:#0a0a0a; font-size:12px; font-weight:700; padding:0 14px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .ex-add-btn:disabled { opacity:0.3; cursor:not-allowed; }
+
+    /* Graphiques */
+    .stats-overlay { position:fixed; inset:0; z-index:150; background:rgba(0,0,0,0.9); display:flex; align-items:flex-end; justify-content:center; animation:fadeIn 0.2s ease; }
+    .stats-panel { background:#111; border:1px solid var(--border); border-radius:20px 20px 0 0; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; padding:24px 20px 40px; }
+    .stats-title { font-family:'Bebas Neue',sans-serif; font-size:28px; margin-bottom:4px; }
+    .stats-subtitle { font-size:12px; color:var(--muted); margin-bottom:16px; }
+    .stats-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+    .stats-filter-btn { padding:5px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .stats-filter-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(232,255,0,0.08); }
+    .chart-wrap { margin-bottom:20px; }
+    .chart-title { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px; }
+    .bar-chart { display:flex; align-items:flex-end; gap:3px; height:100px; width:100%; }
+    .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .bar { width:100%; border-radius:3px 3px 0 0; background:var(--accent); opacity:0.7; min-height:2px; transition:height 0.3s; cursor:pointer; }
+    .bar:hover { opacity:1; }
+    .bar-label { font-size:8px; color:var(--muted); writing-mode:vertical-rl; transform:rotate(180deg); max-height:30px; overflow:hidden; }
+    .stats-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+    .stat-box { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center; }
+    .stat-box-val { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--accent); }
+    .stat-box-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; }
+    .records-list { display:flex; flex-direction:column; gap:8px; }
+    .record-item { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:10px; }
+    .record-crown { font-size:18px; }
+    .record-info { flex:1; }
+    .record-name { font-size:13px; font-weight:600; }
+    .record-val { font-size:11px; color:var(--muted); }
+    .record-best { font-family:'Bebas Neue',sans-serif; font-size:22px; color:#ffcc00; }
+
+    /* Export */
+    .export-btn { width:100%; height:50px; border-radius:12px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; }
+    .export-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* Programme hebdo */
+    .weekly-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:16px; }
+    .day-col { display:flex; flex-direction:column; gap:4px; }
+    .day-header { font-size:10px; text-align:center; color:var(--muted); font-weight:600; padding:4px 0; text-transform:uppercase; }
+    .day-header.today { color:var(--accent); }
+    .day-slot { min-height:36px; border:1px solid var(--border); border-radius:6px; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; padding:4px 2px; transition:all 0.13s; }
+    .day-slot:hover { border-color:#444; }
+    .day-slot.has-groups { border-color:var(--accent); background:rgba(232,255,0,0.05); }
+    .day-slot.is-today { box-shadow:0 0 0 2px var(--accent); }
+    .day-slot-emoji { font-size:12px; }
+    .day-slot-empty { font-size:16px; color:var(--border); }
+    .day-edit-panel { padding:14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:12px; }
+    .day-edit-title { font-size:13px; font-weight:600; margin-bottom:10px; }
+    .day-group-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+    .day-group-btn { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-size:11px; font-family:'DM Sans',sans-serif; }
+    .day-group-btn.sel { border-color:var(--g-color,var(--accent)); color:var(--g-color,var(--accent)); }
+    .day-group-btn .dg-emoji { font-size:16px; }
+    .weekly-start-btn { width:100%; height:50px; border-radius:12px; border:none; background:var(--accent); color:#0a0a0a; font-family:'Bebas Neue',sans-serif; font-size:20px; cursor:pointer; }
+    .weekly-start-btn:disabled { opacity:0.3; cursor:not-allowed; }
+
+    /* Programme hebdo — onglet dans l'app */
+    .weekly-tab { width:100%; max-width:420px; }
   `;
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  PROGRAMME HEBDOMADAIRE
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  const [weeklyProgram, setWeeklyProgram] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("rc-weekly") || "{}"); } catch { return {}; }
+  });
+  const [showWeekly, setShowWeekly] = useState(false);
+  const [editingDay, setEditingDay] = useState(null);
+
+  const DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  const todayIdx = (new Date().getDay() + 6) % 7; // 0=Lun
+
+  function saveWeekly(w) {
+    localStorage.setItem("rc-weekly", JSON.stringify(w));
+    setWeeklyProgram(w);
+  }
+
+  function toggleDayGroup(dayKey, groupId) {
+    const current = weeklyProgram[dayKey] || [];
+    const next = current.includes(groupId)
+      ? current.filter(g => g !== groupId)
+      : [...current, groupId];
+    saveWeekly({ ...weeklyProgram, [dayKey]: next });
+  }
+
+  function startFromWeekly() {
+    const todayKey = DAY_KEYS[todayIdx];
+    const groups = weeklyProgram[todayKey] || [];
+    if (groups.length === 0) return;
+    setSelectedGroups(groups);
+    setShowWeekly(false);
+    setStep("exercises");
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  RECORDS PERSONNELS
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  function computeRecords(hist) {
+    const records = {};
+    hist.forEach(session => {
+      session.exercises.forEach(ex => {
+        const maxReps = Math.max(...ex.sets);
+        if (!records[ex.exName] || maxReps > records[ex.exName]) {
+          records[ex.exName] = maxReps;
+        }
+      });
+    });
+    return records;
+  }
+
+  function checkNewRecord(exName, reps) {
+    const records = computeRecords(history);
+    return reps > (records[exName] || 0);
+  }
+
+  // Vérifie si le rep en cours bat un record
+  const currentRec = curExName => {
+    if (!repInput || parseInt(repInput) === 0) return false;
+    return checkNewRecord(curExName, parseInt(repInput));
+  };
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  GRAPHIQUES — calcul des données
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  function getChartData() {
+    const days = getLast30Days();
+    return days.map(day => {
+      const sessions = history.filter(s => new Date(s.date).toDateString() === day);
+      let reps = 0;
+      sessions.forEach(s => {
+        if (statsGroup === "all") {
+          reps += s.totalReps;
+        } else {
+          s.exercises.forEach(ex => {
+            if (ex.group === statsGroup) reps += ex.sets.reduce((a, r) => a + r, 0);
+          });
+        }
+      });
+      return { day, reps, label: new Date(day).getDate() + "/" + (new Date(day).getMonth() + 1) };
+    });
+  }
+
+  function getStatsNumbers() {
+    const filtered = statsGroup === "all" ? history :
+      history.filter(s => s.exercises.some(e => e.group === statsGroup));
+    const totalReps = filtered.reduce((acc, s) => acc + s.totalReps, 0);
+    const totalSessions = filtered.length;
+    const avgReps = totalSessions > 0 ? Math.round(totalReps / totalSessions) : 0;
+    return { totalReps, totalSessions, avgReps };
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  EXPORT CSV
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  function exportCSV() {
+    const lines = ["Date,Heure,Groupes,Exercice,Série,Reps,Note"];
+    history.forEach(s => {
+      const date = formatDate(s.date);
+      const time = formatTime(s.date);
+      const groups = s.groups.map(g => getGroupMeta(g)?.label || g).join("+");
+      const note = s.note || "";
+      s.exercises.forEach(ex => {
+        ex.sets.forEach((r, i) => {
+          lines.push(`"${date}","${time}","${groups}","${ex.exName}",${i + 1},${r},"${note}"`);
+        });
+      });
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "rep-counter-historique.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportJSON() {
+    const blob = new Blob([JSON.stringify(history, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "rep-counter-historique.json"; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  LOGIQUE WORKOUT
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   function getGroupMeta(id) { return DEFAULT_MUSCLE_GROUPS.find(g => g.id === id); }
 
   function toggleGroup(id) {
-    setSelectedGroups(prev =>
-      prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]
-    );
+    setSelectedGroups(prev => prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]);
     setSelectedExercises([]);
   }
 
@@ -429,14 +670,12 @@ export default function WorkoutCounter() {
   function addCustomExercise() {
     const name = customInput.trim();
     if (!name || !customGroup) return;
-    const newCustom = { ...customExercises, [customGroup]: [...(customExercises[customGroup] || []), name] };
-    saveCustomExercises(newCustom);
+    saveCustomExercises({ ...customExercises, [customGroup]: [...(customExercises[customGroup] || []), name] });
     setCustomInput("");
   }
 
   function deleteCustomExercise(groupId, name) {
-    const newCustom = { ...customExercises, [groupId]: (customExercises[groupId] || []).filter(n => n !== name) };
-    saveCustomExercises(newCustom);
+    saveCustomExercises({ ...customExercises, [groupId]: (customExercises[groupId] || []).filter(n => n !== name) });
     setSelectedExercises(prev => prev.filter(e => !(e.name === name && e.group === groupId)));
   }
 
@@ -448,6 +687,7 @@ export default function WorkoutCounter() {
     if (plan.length > 0) plan[0].sets[0].status = "active";
     setWorkoutPlan(plan);
     setCurrentExIdx(0); setCurrentSetIdx(0); setRepInput("");
+    setSessionSeconds(0); setSessionTimerActive(true);
     setStep("workout");
   }
 
@@ -472,10 +712,7 @@ export default function WorkoutCounter() {
     if (pendingNext.current) { pendingNext.current(); pendingNext.current = null; }
   }
 
-  function changeRestDuration(newDur) {
-    setRestDuration(newDur);
-    setRestRemaining(newDur);
-  }
+  function changeRestDuration(d) { setRestDuration(d); setRestRemaining(d); }
 
   function validateSet() {
     const reps = parseInt(repInput) || 0;
@@ -509,6 +746,8 @@ export default function WorkoutCounter() {
         setCurrentExIdx(e => e + 1);
         setCurrentSetIdx(0);
       } else {
+        // Fin de séance
+        setSessionTimerActive(false);
         const totalReps = updatedPlan.reduce((acc, ex) => acc + ex.sets.reduce((a, s) => a + (s.reps || 0), 0), 0);
         const session = {
           id: Date.now().toString(),
@@ -521,7 +760,11 @@ export default function WorkoutCounter() {
           totalReps,
           totalSets: totalSets * updatedPlan.length,
           targetReps,
+          duration: sessionSeconds,
+          note: "",
         };
+        // Stocker temporairement la session pour ajouter la note
+        pendingSessionRef.current = session;
         const newHistory = [session, ...history];
         saveHistory(newHistory);
         setStep("done");
@@ -532,9 +775,18 @@ export default function WorkoutCounter() {
     else doNext();
   }
 
+  const pendingSessionRef = useRef(null);
+
+  function saveNoteToSession(note) {
+    if (!pendingSessionRef.current) return;
+    const updatedHistory = history.map(s =>
+      s.id === pendingSessionRef.current.id ? { ...s, note } : s
+    );
+    saveHistory(updatedHistory);
+  }
+
   function deleteSession(id) {
-    const newHistory = history.filter(s => s.id !== id);
-    saveHistory(newHistory);
+    saveHistory(history.filter(s => s.id !== id));
     setOpenSession(null);
   }
 
@@ -543,59 +795,41 @@ export default function WorkoutCounter() {
     setCustomInput(""); setCustomGroup(null); setTotalSets(3); setTargetReps(10);
     setWorkoutPlan([]); setCurrentExIdx(0); setCurrentSetIdx(0); setRepInput("");
     setShowRest(false); setShowHistory(false); setShowSettings(false);
-    pendingNext.current = null;
+    setShowStats(false); setShowWeekly(false); setSessionNote("");
+    setSessionTimerActive(false); setSessionSeconds(0);
+    pendingNext.current = null; pendingSessionRef.current = null;
   }
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  LOGIQUE PARAMÈTRES
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  PARAMÈTRES
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  function updateThemeColor(key, val) {
-    const newTheme = { ...theme, [key]: val };
-    saveTheme(newTheme);
+  function applyPreset(preset) {
+    saveTheme({ ...theme, ...preset });
   }
 
-  function applyWallpaper() {
-    const newTheme = { ...theme, wallpaperUrl: wallpaperInput };
-    saveTheme(newTheme);
-  }
+  function updateThemeColor(key, val) { saveTheme({ ...theme, [key]: val }); }
+
+  function applyWallpaper() { saveTheme({ ...theme, wallpaperUrl: wallpaperInput }); }
 
   function removeWallpaper() {
     setWallpaperInput("");
-    const newTheme = { ...theme, wallpaperUrl: "" };
-    saveTheme(newTheme);
+    saveTheme({ ...theme, wallpaperUrl: "" });
   }
 
-  function updateOpacity(val) {
-    const newTheme = { ...theme, wallpaperOpacity: val };
-    saveTheme(newTheme);
-  }
-
-  function resetTheme() {
-    saveTheme(DEFAULT_THEME);
-    setWallpaperInput("");
-  }
-
-  // Éditeur d'exercices dans les paramètres
   function addExerciseInEditor(groupId) {
     if (!newExInput.trim()) return;
-    const newList = [...(editableExercises[groupId] || []), newExInput.trim()];
-    saveExercises({ ...editableExercises, [groupId]: newList });
+    saveExercises({ ...editableExercises, [groupId]: [...(editableExercises[groupId] || []), newExInput.trim()] });
     setNewExInput("");
   }
 
   function removeExerciseInEditor(groupId, name) {
-    const newList = (editableExercises[groupId] || []).filter(n => n !== name);
-    saveExercises({ ...editableExercises, [groupId]: newList });
+    saveExercises({ ...editableExercises, [groupId]: (editableExercises[groupId] || []).filter(n => n !== name) });
   }
 
-  function resetExercises() {
-    saveExercises(DEFAULT_EXERCISES);
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  //  CALCULS DIVERS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  VARIABLES UTILES
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   const curEx = workoutPlan[currentExIdx];
   const curGroupMeta = curEx ? getGroupMeta(curEx.group) : null;
@@ -610,14 +844,19 @@ export default function WorkoutCounter() {
     acc[day].push(s);
     return acc;
   }, {});
+  const chartData = getChartData();
+  const maxBar = Math.max(...chartData.map(d => d.reps), 1);
+  const statsNumbers = getStatsNumbers();
+  const records = computeRecords(history);
+  const isNewRec = curEx && repInput && parseInt(repInput) > 0 && checkNewRecord(curEx.exName, parseInt(repInput));
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  RENDU — REPOS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   if (showRest) return (
     <>
-      <style>{dynamicCss}</style>
+      <style>{css}</style>
       <div className="rest-overlay">
         <div className="rest-title">Temps de repos</div>
         <div className="rest-exercise">{curEx?.exName}</div>
@@ -656,29 +895,32 @@ export default function WorkoutCounter() {
     </>
   );
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  RENDU — HISTORIQUE
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   if (showHistory) return (
     <>
-      <style>{dynamicCss}</style>
+      <style>{css}</style>
       <div className="app">
         <div className="header">
           <div>
             <div className="header-label">Musculation</div>
             <div className="header-title">HISTO<br />RIQUE</div>
           </div>
-          <button className="icon-btn active" onClick={() => setShowHistory(false)}>
-            <span className="ib-icon">🏋️</span>Séance
-          </button>
+          <div className="header-actions">
+            <button className="icon-btn" onClick={exportCSV}>📥 CSV</button>
+            <button className="icon-btn" onClick={exportJSON}>📥 JSON</button>
+            <button className="icon-btn active" onClick={() => setShowHistory(false)}>
+              <span className="ib-icon">🏋️</span>Retour
+            </button>
+          </div>
         </div>
         {history.length === 0 ? (
           <div className="card">
             <div className="hist-empty">
               <div className="hist-empty-icon">📋</div>
               <div>Aucune séance enregistrée.</div>
-              <div style={{ marginTop: 6, fontSize: 12 }}>Lance ta première séance !</div>
             </div>
           </div>
         ) : (
@@ -706,27 +948,33 @@ export default function WorkoutCounter() {
                         <div className="hist-session-meta">
                           <div className="hist-session-time">{formatTime(session.date)}</div>
                           <div className="hist-session-reps">{session.totalReps} reps</div>
+                          {session.duration && (
+                            <div style={{ fontSize: 10, color: "var(--muted)" }}>⏱ {formatDuration(session.duration)}</div>
+                          )}
                         </div>
                       </div>
                       {isOpen && (
                         <div className="hist-detail" onClick={e => e.stopPropagation()}>
+                          {session.note && (
+                            <div className="hist-note">📝 {session.note}</div>
+                          )}
                           {session.exercises.map((ex, i) => {
                             const total = ex.sets.reduce((a, r) => a + r, 0);
                             return (
-                              <div key={i} className="hist-ex">
+                              <div key={i}>
                                 <div className="hist-ex-name">{ex.exName}</div>
-                                <div className="hist-sets-row">
+                                <div className="hist-sets-row" style={{ margin: "4px 0" }}>
                                   {ex.sets.map((r, si) => (
                                     <div key={si} className="hist-set-chip">S{si + 1} : {r} reps</div>
                                   ))}
                                 </div>
-                                <div className="hist-ex-total">{total} reps au total</div>
+                                <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6 }}>{total} reps</div>
                               </div>
                             );
                           })}
                           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)" }}>
                             <span>{session.exercises.length} exercice{session.exercises.length > 1 ? "s" : ""}</span>
-                            <span>{session.totalSets} séries · objectif {session.targetReps} reps</span>
+                            <span>{session.totalSets} séries</span>
                           </div>
                           <button className="del-session-btn" onClick={() => deleteSession(session.id)}>
                             Supprimer cette séance
@@ -744,38 +992,150 @@ export default function WorkoutCounter() {
     </>
   );
 
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  RENDU — PROGRAMME HEBDO
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  if (showWeekly) return (
+    <>
+      <style>{css}</style>
+      <div className="app">
+        <div className="header">
+          <div>
+            <div className="header-label">Musculation</div>
+            <div className="header-title">PROG<br />RAMME</div>
+          </div>
+          <button className="icon-btn active" onClick={() => setShowWeekly(false)}>
+            <span className="ib-icon">🏋️</span>Retour
+          </button>
+        </div>
+
+        <div className="card weekly-tab">
+          <div className="section-title">Programme de la semaine</div>
+          <div className="weekly-grid">
+            {DAYS.map((day, i) => {
+              const key = DAY_KEYS[i];
+              const groups = weeklyProgram[key] || [];
+              const isToday = i === todayIdx;
+              return (
+                <div key={key} className="day-col">
+                  <div className={`day-header${isToday ? " today" : ""}`}>{day}</div>
+                  <div className={`day-slot${groups.length > 0 ? " has-groups" : ""}${isToday ? " is-today" : ""}`}
+                    onClick={() => setEditingDay(editingDay === key ? null : key)}>
+                    {groups.length > 0
+                      ? groups.map(g => <span key={g} className="day-slot-emoji">{getGroupMeta(g)?.emoji}</span>)
+                      : <span className="day-slot-empty">+</span>
+                    }
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {editingDay && (
+            <div className="day-edit-panel">
+              <div className="day-edit-title">
+                {DAYS[DAY_KEYS.indexOf(editingDay)]} — Choisir les groupes musculaires
+              </div>
+              <div className="day-group-grid">
+                {DEFAULT_MUSCLE_GROUPS.map(g => {
+                  const sel = (weeklyProgram[editingDay] || []).includes(g.id);
+                  return (
+                    <button key={g.id} className={`day-group-btn${sel ? " sel" : ""}`}
+                      style={{ "--g-color": g.color }}
+                      onClick={() => toggleDayGroup(editingDay, g.id)}>
+                      <span className="dg-emoji">{g.emoji}</span>
+                      {g.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Bouton lancer séance d'aujourd'hui */}
+          {(weeklyProgram[DAY_KEYS[todayIdx]] || []).length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", marginBottom: 8 }}>
+                Aujourd'hui : {(weeklyProgram[DAY_KEYS[todayIdx]] || []).map(g => getGroupMeta(g)?.label).join(" · ")}
+              </div>
+              <button className="weekly-start-btn" onClick={startFromWeekly}>
+                LANCER LA SÉANCE DU JOUR →
+              </button>
+            </div>
+          )}
+          {(weeklyProgram[DAY_KEYS[todayIdx]] || []).length === 0 && (
+            <div style={{ textAlign: "center", padding: "12px 0", fontSize: 13, color: "var(--muted)" }}>
+              Aucune séance programmée aujourd'hui — clique sur le jour pour en ajouter une.
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  RENDU PRINCIPAL
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   return (
     <>
-      <style>{dynamicCss}</style>
+      <style>{css}</style>
 
-      {/* ── PANNEAU PARAMÈTRES ── */}
+      {/* ── PARAMÈTRES ── */}
       {showSettings && (
         <div className="settings-overlay" onClick={() => setShowSettings(false)}>
           <div className="settings-panel" onClick={e => e.stopPropagation()}>
             <div className="settings-handle" />
             <div className="settings-title">⚙️ PARAMÈTRES</div>
-
-            {/* Onglets */}
             <div className="settings-tabs">
-              <button className={`stab${settingsTab === "theme" ? " active" : ""}`} onClick={() => setSettingsTab("theme")}>🎨 Couleurs</button>
-              <button className={`stab${settingsTab === "wallpaper" ? " active" : ""}`} onClick={() => setSettingsTab("wallpaper")}>🖼️ Fond d'écran</button>
-              <button className={`stab${settingsTab === "exercises" ? " active" : ""}`} onClick={() => setSettingsTab("exercises")}>💪 Exercices</button>
+              {[
+                { id: "themes", label: "🎨 Thèmes" },
+                { id: "colors", label: "🖌️ Couleurs" },
+                { id: "wallpaper", label: "🖼️ Fond" },
+                { id: "exercises", label: "💪 Exercices" },
+                { id: "export", label: "📥 Export" },
+              ].map(t => (
+                <button key={t.id} className={`stab${settingsTab === t.id ? " active" : ""}`}
+                  onClick={() => setSettingsTab(t.id)}>{t.label}</button>
+              ))}
             </div>
 
-            {/* ── ONGLET COULEURS ── */}
-            {settingsTab === "theme" && (
+            {/* ── THÈMES PRÉDÉFINIS ── */}
+            {settingsTab === "themes" && (
+              <div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>
+                  Sélectionne un thème prédéfini pour changer l'apparence en un clic.
+                </div>
+                <div className="themes-grid">
+                  {PRESET_THEMES.map(preset => (
+                    <div key={preset.id}
+                      className={`theme-card${theme.bg === preset.bg && theme.accent === preset.accent ? " selected-theme" : ""}`}
+                      onClick={() => applyPreset(preset)}>
+                      <div className="theme-preview" style={{ background: preset.surface }}>
+                        <div className="theme-accent-strip" style={{ background: preset.accent }} />
+                        <span className="theme-emoji">{preset.emoji}</span>
+                        <span className="theme-name" style={{ color: preset.text }}>{preset.name}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
+                  Clique sur l'onglet "Couleurs" pour personnaliser manuellement.
+                </div>
+              </div>
+            )}
+
+            {/* ── COULEURS MANUELLES ── */}
+            {settingsTab === "colors" && (
               <div>
                 {[
-                  { key: "bg",      label: "Fond de page",      desc: "Couleur d'arrière-plan principale" },
-                  { key: "surface", label: "Fond des cartes",   desc: "Fond des blocs et panneaux" },
-                  { key: "accent",  label: "Couleur principale", desc: "Boutons, timer, éléments actifs" },
-                  { key: "accent2", label: "Couleur d'alerte",  desc: "Suppression, avertissements" },
-                  { key: "text",    label: "Texte",             desc: "Couleur du texte principal" },
-                  { key: "success", label: "Succès",            desc: "Séries validées, terminé" },
+                  { key: "bg",      label: "Fond de page",      desc: "Arrière-plan principal" },
+                  { key: "surface", label: "Fond des cartes",   desc: "Blocs et panneaux" },
+                  { key: "accent",  label: "Couleur principale", desc: "Boutons, timer actifs" },
+                  { key: "accent2", label: "Couleur d'alerte",  desc: "Suppression, danger" },
+                  { key: "text",    label: "Texte",             desc: "Texte principal" },
+                  { key: "success", label: "Succès",            desc: "Séries validées" },
                   { key: "muted",   label: "Texte secondaire",  desc: "Labels, indications" },
                   { key: "border",  label: "Bordures",          desc: "Contour des éléments" },
                 ].map(({ key, label, desc }) => (
@@ -788,73 +1148,44 @@ export default function WorkoutCounter() {
                       onChange={e => updateThemeColor(key, e.target.value)} />
                   </div>
                 ))}
-                <button className="reset-all-btn" onClick={resetTheme}>
+                <button className="reset-all-btn" onClick={() => saveTheme(DEFAULT_THEME)}>
                   Réinitialiser toutes les couleurs
                 </button>
               </div>
             )}
 
-            {/* ── ONGLET FOND D'ÉCRAN ── */}
+            {/* ── FOND D'ÉCRAN ── */}
             {settingsTab === "wallpaper" && (
-              <div className="wallpaper-section">
+              <div>
                 <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12, lineHeight: 1.6 }}>
-                  Colle l'URL d'une image (depuis internet) ou copie le lien direct d'une de tes photos hébergées en ligne.
+                  Colle une URL d'image. Pour tes propres photos, utilise <strong style={{ color: "var(--text)" }}>imgbb.com</strong> (gratuit) → téléverse → copie le "Lien direct".
                 </p>
-
-                <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                  URL de l'image
-                </div>
-                <input
-                  className="wallpaper-input"
-                  placeholder="https://exemple.com/ma-photo.jpg"
-                  value={wallpaperInput}
-                  onChange={e => setWallpaperInput(e.target.value)}
-                />
-
+                <input className="wallpaper-input" placeholder="https://i.ibb.co/exemple.jpg"
+                  value={wallpaperInput} onChange={e => setWallpaperInput(e.target.value)} />
                 <div className="wallpaper-preview">
-                  {wallpaperInput ? (
-                    <img src={wallpaperInput} alt="Aperçu" onError={e => { e.target.style.display = "none"; }} />
-                  ) : (
-                    <div className="wallpaper-preview-empty">Aperçu du fond d'écran</div>
-                  )}
+                  {wallpaperInput
+                    ? <img src={wallpaperInput} alt="Aperçu" />
+                    : <span style={{ fontSize: 12, color: "var(--muted)" }}>Aperçu ici</span>}
                 </div>
-
                 <div className="opacity-row">
-                  <div className="opacity-label">Opacité de l'image</div>
+                  <div className="opacity-label">Opacité</div>
                   <input type="range" className="opacity-slider" min="0.05" max="0.6" step="0.05"
                     value={theme.wallpaperOpacity}
-                    onChange={e => updateOpacity(e.target.value)} />
+                    onChange={e => saveTheme({ ...theme, wallpaperOpacity: e.target.value })} />
                   <div className="opacity-val">{Math.round(parseFloat(theme.wallpaperOpacity) * 100)}%</div>
                 </div>
-
-                <button className="apply-wall-btn" onClick={applyWallpaper}>
-                  APPLIQUER LE FOND D'ÉCRAN
-                </button>
-
+                <button className="apply-wall-btn" onClick={applyWallpaper}>APPLIQUER</button>
                 {theme.wallpaperUrl && (
-                  <button className="remove-wall-btn" onClick={removeWallpaper}>
-                    Supprimer le fond d'écran
-                  </button>
+                  <button className="remove-wall-btn" onClick={removeWallpaper}>Supprimer le fond</button>
                 )}
-
-                <div style={{ marginTop: 16, padding: 12, background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)" }}>
-                  <div style={{ fontSize: 11, color: "var(--accent)", fontWeight: 600, marginBottom: 6 }}>💡 Comment utiliser tes propres photos ?</div>
-                  <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
-                    1. Va sur <strong style={{ color: "var(--text)" }}>imgbb.com</strong> (gratuit)<br />
-                    2. Clique <strong style={{ color: "var(--text)" }}>"Choisir des images"</strong> et sélectionne ta photo<br />
-                    3. Clique <strong style={{ color: "var(--text)" }}>"Téléverser"</strong><br />
-                    4. Copie le lien <strong style={{ color: "var(--text)" }}>"Lien direct"</strong><br />
-                    5. Colle-le dans le champ ci-dessus
-                  </div>
-                </div>
               </div>
             )}
 
-            {/* ── ONGLET EXERCICES ── */}
+            {/* ── EXERCICES ── */}
             {settingsTab === "exercises" && (
               <div>
-                <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6 }}>
-                  Modifie la liste par défaut des exercices. Ces changements s'appliquent à toutes tes prochaines séances.
+                <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12, lineHeight: 1.6 }}>
+                  Clique sur un groupe pour le déplier et modifier sa liste d'exercices.
                 </p>
                 {DEFAULT_MUSCLE_GROUPS.map(g => {
                   const isOpen = editingGroup === g.id;
@@ -869,7 +1200,7 @@ export default function WorkoutCounter() {
                         <span style={{ color: "var(--muted)", fontSize: 12 }}>{isOpen ? "▲" : "▼"}</span>
                       </div>
                       {isOpen && (
-                        <div>
+                        <div className="ex-editor-body">
                           {exList.map((name, i) => (
                             <div key={i} className="ex-editor-item">
                               <span className="ex-editor-name">{name}</span>
@@ -878,27 +1209,114 @@ export default function WorkoutCounter() {
                             </div>
                           ))}
                           <div className="ex-add-row">
-                            <input className="ex-add-input"
-                              placeholder="Nouvel exercice..."
+                            <input className="ex-add-input" placeholder="Nouvel exercice..."
                               value={editingGroup === g.id ? newExInput : ""}
                               onChange={e => setNewExInput(e.target.value)}
-                              onKeyDown={e => e.key === "Enter" && addExerciseInEditor(g.id)}
-                            />
-                            <button className="ex-add-btn"
-                              disabled={!newExInput.trim()}
-                              onClick={() => addExerciseInEditor(g.id)}>
-                              + Ajouter
-                            </button>
+                              onKeyDown={e => e.key === "Enter" && addExerciseInEditor(g.id)} />
+                            <button className="ex-add-btn" disabled={!newExInput.trim()}
+                              onClick={() => addExerciseInEditor(g.id)}>+ Ajouter</button>
                           </div>
                         </div>
                       )}
                     </div>
                   );
                 })}
-                <button className="reset-all-btn" onClick={resetExercises}>
-                  Réinitialiser la liste d'exercices par défaut
+                <button className="reset-all-btn" onClick={() => saveExercises(DEFAULT_EXERCISES)}>
+                  Réinitialiser les exercices par défaut
                 </button>
               </div>
+            )}
+
+            {/* ── EXPORT ── */}
+            {settingsTab === "export" && (
+              <div>
+                <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6 }}>
+                  Exporte ton historique complet pour le conserver ou l'analyser dans un tableur.
+                </p>
+                <button className="export-btn" onClick={exportCSV}>
+                  📊 Exporter en CSV (Excel, Google Sheets)
+                </button>
+                <button className="export-btn" onClick={exportJSON}>
+                  🗂️ Exporter en JSON (sauvegarde brute)
+                </button>
+                <div style={{ marginTop: 12, padding: 12, background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, color: "var(--muted)", lineHeight: 1.7 }}>
+                  <strong style={{ color: "var(--accent)" }}>CSV</strong> — ouvre le fichier dans Excel ou Google Sheets pour faire des tableaux et graphiques.<br />
+                  <strong style={{ color: "var(--accent)" }}>JSON</strong> — format technique pour sauvegarder et restaurer tes données.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── GRAPHIQUES ── */}
+      {showStats && (
+        <div className="stats-overlay" onClick={() => setShowStats(false)}>
+          <div className="stats-panel" onClick={e => e.stopPropagation()}>
+            <div className="settings-handle" />
+            <div className="stats-title">📊 STATISTIQUES</div>
+            <div className="stats-subtitle">30 derniers jours</div>
+
+            <div className="stats-filter">
+              <button className={`stats-filter-btn${statsGroup === "all" ? " active" : ""}`}
+                onClick={() => setStatsGroup("all")}>Tout</button>
+              {DEFAULT_MUSCLE_GROUPS.map(g => (
+                <button key={g.id}
+                  className={`stats-filter-btn${statsGroup === g.id ? " active" : ""}`}
+                  onClick={() => setStatsGroup(g.id)}>
+                  {g.emoji} {g.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="stats-summary">
+              <div className="stat-box">
+                <div className="stat-box-val">{statsNumbers.totalSessions}</div>
+                <div className="stat-box-label">Séances</div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-box-val">{statsNumbers.totalReps}</div>
+                <div className="stat-box-label">Reps total</div>
+              </div>
+              <div className="stat-box">
+                <div className="stat-box-val">{statsNumbers.avgReps}</div>
+                <div className="stat-box-label">Moy/séance</div>
+              </div>
+            </div>
+
+            <div className="chart-wrap">
+              <div className="chart-title">Reps par jour (30 jours)</div>
+              <div className="bar-chart">
+                {chartData.map((d, i) => (
+                  <div key={i} className="bar-col">
+                    <div className="bar"
+                      style={{ height: `${Math.max((d.reps / maxBar) * 80, d.reps > 0 ? 6 : 2)}px` }}
+                      title={`${d.label} : ${d.reps} reps`} />
+                    {i % 5 === 0 && <div className="bar-label">{d.label}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {Object.keys(records).length > 0 && (
+              <>
+                <div className="chart-title" style={{ marginBottom: 8 }}>🏅 Records personnels</div>
+                <div className="records-list">
+                  {Object.entries(records)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 8)
+                    .map(([name, best]) => (
+                      <div key={name} className="record-item">
+                        <span className="record-crown">🥇</span>
+                        <div className="record-info">
+                          <div className="record-name">{name}</div>
+                          <div className="record-val">Meilleure série</div>
+                        </div>
+                        <div className="record-best">{best} reps</div>
+                      </div>
+                    ))}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -912,16 +1330,29 @@ export default function WorkoutCounter() {
             <div className="header-title">REP<br />COUNTER</div>
           </div>
           <div className="header-actions">
+            <button className="icon-btn" onClick={() => setShowWeekly(true)}>
+              <span className="ib-icon">📅</span>Programme
+            </button>
             <button className="icon-btn" onClick={() => setShowHistory(true)}>
               <span className="ib-icon">📋</span>
               {history.length > 0 ? `(${history.length})` : "Historique"}
             </button>
+            <button className="icon-btn" onClick={() => setShowStats(true)}>
+              <span className="ib-icon">📊</span>Stats
+            </button>
             <button className={`icon-btn${showSettings ? " active" : ""}`} onClick={() => setShowSettings(s => !s)}>
-              <span className="ib-icon">⚙️</span>
-              Réglages
+              <span className="ib-icon">⚙️</span>Réglages
             </button>
           </div>
         </div>
+
+        {step === "workout" && (
+          <div className="session-timer">
+            <span className="timer-icon">⏱️</span>
+            <span className="timer-label">Durée de la séance</span>
+            <span className="timer-val">{formatDuration(sessionSeconds)}</span>
+          </div>
+        )}
 
         {step !== "done" && (
           <div className="step-nav">
@@ -1012,7 +1443,7 @@ export default function WorkoutCounter() {
                         border: `1px solid ${customGroup === gid ? g.color : "var(--border)"}`,
                         borderRadius: 6, padding: "4px 10px",
                         color: customGroup === gid ? g.color : "var(--muted)",
-                        fontSize: 12, cursor: "pointer", transition: "all 0.13s"
+                        fontSize: 12, cursor: "pointer"
                       }}>
                       {g.emoji} {g.label}
                     </button>
@@ -1069,8 +1500,7 @@ export default function WorkoutCounter() {
                         border: `1px solid ${restDuration === s ? "var(--accent)" : "var(--border)"}`,
                         borderRadius: 6, padding: "6px 10px",
                         color: restDuration === s ? "#0a0a0a" : "var(--muted)",
-                        fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600,
-                        cursor: "pointer", transition: "all 0.13s"
+                        fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer"
                       }}>
                       {s < 60 ? `${s}s` : `${s / 60}min`}
                     </button>
@@ -1133,6 +1563,14 @@ export default function WorkoutCounter() {
                 </div>
                 <div className="go-target">Objectif : <span>{targetReps} reps</span></div>
               </div>
+
+              {/* Badge record */}
+              {isNewRec && (
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                  <div className="record-badge">🏅 NOUVEAU RECORD !</div>
+                </div>
+              )}
+
               <div className="rep-entry-label">Entre le nombre de reps effectuées</div>
               <div className={`rep-display-val${repInput ? " has-val" : ""}`}>{repInput || "—"}</div>
               <div className="rep-numpad">
@@ -1182,7 +1620,7 @@ export default function WorkoutCounter() {
               <div className="done-emoji">🏆</div>
               <div className="done-title">SÉANCE TERMINÉE !</div>
               <div className="done-sub">
-                {selectedGroups.map(id => getGroupMeta(id)?.label).join(" · ")}<br/>
+                {selectedGroups.map(id => getGroupMeta(id)?.label).join(" · ")}<br />
                 Séance enregistrée ✓
               </div>
               <div className="done-stats">
@@ -1198,7 +1636,27 @@ export default function WorkoutCounter() {
                   <div className="done-stat-val">{totalRepsDone}</div>
                   <div className="done-stat-label">Reps</div>
                 </div>
+                <div className="done-stat">
+                  <div className="done-stat-val">{formatDuration(sessionSeconds)}</div>
+                  <div className="done-stat-label">Durée</div>
+                </div>
               </div>
+
+              {/* Note de séance */}
+              <div style={{ width: "100%", textAlign: "left" }}>
+                <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
+                  📝 Note de séance (optionnel)
+                </div>
+                <textarea className="note-area"
+                  placeholder="Comment s'est passée la séance ? PR au squat ? Séance difficile ?..."
+                  value={sessionNote}
+                  onChange={e => {
+                    setSessionNote(e.target.value);
+                    saveNoteToSession(e.target.value);
+                  }}
+                />
+              </div>
+
               <div style={{ width: "100%", marginTop: 4, display: "flex", flexDirection: "column", gap: 6 }}>
                 {workoutPlan.map((ex, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0", borderBottom: "1px solid var(--border)" }}>

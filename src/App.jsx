@@ -250,18 +250,16 @@ export default function WorkoutCounter() {
       }).catch(() => {});
 
       // Écouter les messages du SW (REST_DONE quand app en arrière-plan)
+      // On utilise juste setRestAlert — finishRest sera appelé après le délai dans le rendu
       navigator.serviceWorker.addEventListener("message", (e) => {
         if (e.data?.type === "REST_DONE") {
           setRestAlert(true);
-          setTimeout(() => finishRest(), 1500);
         }
       });
     }
 
-    // Demander la permission de notification
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().then(setNotifPermission);
-    } else if ("Notification" in window) {
+    // Lire la permission actuelle sans la demander automatiquement (iOS exige un geste)
+    if ("Notification" in window) {
       setNotifPermission(Notification.permission);
     }
   }, []);
@@ -1457,6 +1455,36 @@ export default function WorkoutCounter() {
             <span style={{fontSize:20}}>🔄</span>
             <div className="resume-text"><strong>Séance interrompue</strong> — appuie pour reprendre là où tu t'es arrêté.</div>
             <button className="resume-dismiss" onClick={e=>{e.stopPropagation();dismissResume();}}>×</button>
+          </div>
+        )}
+
+        {/* Bannière activation notifications */}
+        {"Notification" in window && notifPermission !== "granted" && notifPermission !== "denied" && step === "groups" && (
+          <div className="resume-banner" style={{borderColor:"#ff9800",background:"rgba(255,152,0,0.1)"}}
+            onClick={()=>{
+              Notification.requestPermission().then(p => setNotifPermission(p));
+            }}>
+            <span style={{fontSize:20}}>🔔</span>
+            <div className="resume-text" style={{color:"var(--text)"}}>
+              <strong style={{color:"#ff9800"}}>Activer les notifications</strong> — sois alerté quand le repos est terminé, même en arrière-plan.
+            </div>
+            <span style={{fontSize:18,color:"#ff9800"}}>→</span>
+          </div>
+        )}
+
+        {/* Bannière activation notifications */}
+        {"Notification" in window && notifPermission !== "granted" && step === "groups" && (
+          <div className="resume-banner" style={{borderColor:"#ff9800",background:"rgba(255,152,0,0.1)"}}
+            onClick={()=>{
+              Notification.requestPermission().then(p => {
+                setNotifPermission(p);
+              });
+            }}>
+            <span style={{fontSize:20}}>🔔</span>
+            <div className="resume-text" style={{color:"var(--text)"}}>
+              <strong style={{color:"#ff9800"}}>Activer les notifications</strong> — reçois une alerte quand le repos est terminé, même en arrière-plan.
+            </div>
+            <span style={{fontSize:18,color:"#ff9800"}}>→</span>
           </div>
         )}
 

@@ -1460,6 +1460,22 @@ export default function WorkoutCounter() {
           </div>
         )}
 
+        {/* Bannière activation notifications */}
+        {"Notification" in window && notifPermission !== "granted" && step === "groups" && (
+          <div className="resume-banner" style={{borderColor:"#ff9800",background:"rgba(255,152,0,0.1)"}}
+            onClick={()=>{
+              Notification.requestPermission().then(p => {
+                setNotifPermission(p);
+              });
+            }}>
+            <span style={{fontSize:20}}>🔔</span>
+            <div className="resume-text" style={{color:"var(--text)"}}>
+              <strong style={{color:"#ff9800"}}>Activer les notifications</strong> — reçois une alerte quand le repos est terminé, même en arrière-plan.
+            </div>
+            <span style={{fontSize:18,color:"#ff9800"}}>→</span>
+          </div>
+        )}
+
         {step==="workout"&&(
           <div className="session-timer">
             <span className="timer-icon">⏱️</span>

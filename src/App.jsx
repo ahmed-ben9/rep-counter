@@ -1,85 +1,108 @@
 import { useState, useEffect, useRef } from "react";
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  ILLUSTRATIONS SVG PAR GROUPE MUSCULAIRE
+//  ILLUSTRATIONS PAR GROUPE MUSCULAIRE (images PNG)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const MUSCLE_ICONS = {
-  dos: (color = "#4fc3f7", size = 28) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <ellipse cx="16" cy="10" rx="6" ry="4" fill={color} opacity="0.9"/>
-      <path d="M10 14 C6 16 4 20 5 25 L8 25 C8 21 10 18 13 17 Z" fill={color} opacity="0.85"/>
-      <path d="M22 14 C26 16 28 20 27 25 L24 25 C24 21 22 18 19 17 Z" fill={color} opacity="0.85"/>
-      <path d="M13 17 C14 19 16 20 16 20 C16 20 18 19 19 17 L18 14 L14 14 Z" fill={color}/>
-      <ellipse cx="11" cy="13" rx="3" ry="4" fill={color} opacity="0.7"/>
-      <ellipse cx="21" cy="13" rx="3" ry="4" fill={color} opacity="0.7"/>
-      <path d="M13 20 L13 26 L15 26 L16 23 L17 26 L19 26 L19 20" fill={color} opacity="0.8"/>
-    </svg>
-  ),
-  pecs: (color = "#e8ff00", size = 28) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M16 8 C12 8 7 10 6 15 C5 19 7 23 10 24 C13 25 15 22 16 20 C17 22 19 25 22 24 C25 23 27 19 26 15 C25 10 20 8 16 8Z" fill={color} opacity="0.85"/>
-      <path d="M16 8 L16 20" stroke={color} strokeWidth="1.5" opacity="0.4"/>
-      <ellipse cx="11" cy="15" rx="4" ry="5" fill={color} opacity="0.3"/>
-      <ellipse cx="21" cy="15" rx="4" ry="5" fill={color} opacity="0.3"/>
-      <path d="M10 11 C8 12 7 14 7 16" stroke="rgba(0,0,0,0.25)" strokeWidth="1" strokeLinecap="round"/>
-      <path d="M22 11 C24 12 25 14 25 16" stroke="rgba(0,0,0,0.25)" strokeWidth="1" strokeLinecap="round"/>
-    </svg>
-  ),
-  epaules: (color = "#ff9800", size = 28) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="10" r="4" fill={color} opacity="0.9"/>
-      <ellipse cx="7" cy="14" rx="5" ry="4" fill={color} opacity="0.85"/>
-      <ellipse cx="25" cy="14" rx="5" ry="4" fill={color} opacity="0.85"/>
-      <path d="M12 10 C10 11 8 12 7 14" stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M20 10 C22 11 24 12 25 14" stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M12 14 L14 22 L18 22 L20 14" fill={color} opacity="0.7"/>
-      <path d="M7 17 L6 23 L9 23" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none"/>
-      <path d="M25 17 L26 23 L23 23" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none"/>
-    </svg>
-  ),
-  jambes: (color = "#ce93d8", size = 28) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M11 4 L10 16 L9 28 L13 28 L14 18 L16 14 L18 18 L19 28 L23 28 L22 16 L21 4 Z" fill={color} opacity="0.85"/>
-      <ellipse cx="13" cy="8" rx="3" ry="5" fill={color} opacity="0.5"/>
-      <ellipse cx="19" cy="8" rx="3" ry="5" fill={color} opacity="0.5"/>
-      <path d="M10 16 C10 18 11 19 13 19" stroke="rgba(0,0,0,0.2)" strokeWidth="1" fill="none"/>
-      <path d="M22 16 C22 18 21 19 19 19" stroke="rgba(0,0,0,0.2)" strokeWidth="1" fill="none"/>
-      <ellipse cx="11" cy="23" rx="2.5" ry="4" fill={color} opacity="0.6"/>
-      <ellipse cx="21" cy="23" rx="2.5" ry="4" fill={color} opacity="0.6"/>
-    </svg>
-  ),
-  bras: (color = "#f48fb1", size = 28) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M10 20 C8 18 7 14 8 10 C9 7 12 6 14 7 C16 8 17 10 16 13 L15 20 Z" fill={color} opacity="0.85"/>
-      <path d="M22 20 C24 18 25 14 24 10 C23 7 20 6 18 7 C16 8 15 10 16 13 L17 20 Z" fill={color} opacity="0.7"/>
-      <ellipse cx="13" cy="11" rx="3" ry="5" fill={color} opacity="0.6"/>
-      <path d="M10 20 L9 26 L14 26 L15 20" fill={color} opacity="0.8"/>
-      <path d="M22 20 L23 26 L18 26 L17 20" fill={color} opacity="0.65"/>
-      <path d="M9 13 C8 14 8 16 9 17" stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-    </svg>
-  ),
-  cardio: (color = "#ff4d4d", size = 28) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M16 26 C16 26 4 19 4 12 C4 8 7 6 10 6 C12 6 14 7 16 9 C18 7 20 6 22 6 C25 6 28 8 28 12 C28 19 16 26 16 26Z" fill={color} opacity="0.9"/>
-      <path d="M7 14 L10 11 L13 16 L16 10 L19 14 L22 12 L25 14" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.7"/>
-    </svg>
-  ),
-  abdos: (color = "#00e676", size = 28) => (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <path d="M12 4 L12 28 L20 28 L20 4 Z" fill={color} opacity="0.2"/>
-      <rect x="12" y="4"  width="3.5" height="5" rx="1.5" fill={color} opacity="0.9"/>
-      <rect x="16.5" y="4"  width="3.5" height="5" rx="1.5" fill={color} opacity="0.85"/>
-      <rect x="12" y="10.5" width="3.5" height="5" rx="1.5" fill={color} opacity="0.9"/>
-      <rect x="16.5" y="10.5" width="3.5" height="5" rx="1.5" fill={color} opacity="0.85"/>
-      <rect x="12" y="17" width="3.5" height="5" rx="1.5" fill={color} opacity="0.9"/>
-      <rect x="16.5" y="17" width="3.5" height="5" rx="1.5" fill={color} opacity="0.85"/>
-      <rect x="12" y="23.5" width="3.5" height="4" rx="1.5" fill={color} opacity="0.75"/>
-      <rect x="16.5" y="23.5" width="3.5" height="4" rx="1.5" fill={color} opacity="0.7"/>
-      <line x1="16" y1="4" x2="16" y2="28" stroke={color} strokeWidth="0.8" opacity="0.4"/>
-    </svg>
-  ),
+// Chemins relatifs — place les fichiers dans un dossier "images/" à côté de App.jsx
+const MUSCLE_IMAGES = {
+  dos:     "https://i.ibb.co/sJDcDQCz/dos.png",
+  pecs:    "https://i.ibb.co/pvPrdMBw/pecs.png",
+  epaules: "https://i.ibb.co/5g2pVh4Y/epaules.png",
+  jambes:  "https://i.ibb.co/3Yhnhtnw/jambes.png",
+  bras:    "https://i.ibb.co/84tJDgq4/bras.png",
+  cardio:  "https://i.ibb.co/mCkLrtG3/cardio.png",
+  abdos:   "https://i.ibb.co/Pv53Lj7G/abdos.png",
 };
+
+// Petite icône ronde pour les endroits qui utilisaient les SVG 28px (programme hebdo, tags, etc.)
+function MuscleIcon({ groupId, color, size = 28 }) {
+  const src = MUSCLE_IMAGES[groupId];
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt={groupId}
+      style={{
+        width: size,
+        height: size,
+        objectFit: "cover",
+        objectPosition: "center",
+        borderRadius: "50%",
+        border: `1.5px solid ${color}55`,
+        background: "#000",
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+// Grande carte illustrée pour l'écran de sélection des groupes
+function MuscleCard({ groupId, color, label, selected, onClick }) {
+  const src = MUSCLE_IMAGES[groupId];
+  return (
+    <button
+      className={`muscle-card-btn${selected ? " selected" : ""}`}
+      style={{ "--g-color": color }}
+      onClick={onClick}
+    >
+      <div className="muscle-card-img-wrap">
+        <img src={src} alt={label} className="muscle-card-img" />
+        {selected && (
+          <div className="muscle-card-check">✓</div>
+        )}
+      </div>
+      <div className="muscle-card-label">{label}</div>
+    </button>
+  );
+}
+
+// Bannière illustrée pour l'écran de séance (exercice en cours)
+function MuscleSessionBanner({ groupId, color, label }) {
+  const src = MUSCLE_IMAGES[groupId];
+  return (
+    <div style={{
+      width: "100%",
+      height: 140,
+      borderRadius: 12,
+      overflow: "hidden",
+      position: "relative",
+      marginBottom: 16,
+      border: `1px solid ${color}40`,
+    }}>
+      <img src={src} alt={label} style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        objectPosition: "center top",
+      }} />
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)",
+      }} />
+      <div style={{
+        position: "absolute",
+        bottom: 10,
+        left: 14,
+        fontSize: 11,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.15em",
+        color,
+      }}>{label}</div>
+    </div>
+  );
+}
+
+// Compatibilité — les rares endroits qui appellent MUSCLE_ICONS[x]?.(color, size)
+// retournent désormais une petite icône ronde
+const MUSCLE_ICONS = Object.fromEntries(
+  Object.keys(MUSCLE_IMAGES).map(id => [
+    id,
+    (color = "#888", size = 28) => <MuscleIcon groupId={id} color={color} size={size} />,
+  ])
+);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  DONNÉES
@@ -357,12 +380,18 @@ export default function WorkoutCounter() {
     .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:420px;padding:20px;margin-bottom:12px;}
     .section-title{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
 
-    .group-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-    .group-btn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-family:'DM Sans',sans-serif;transition:all 0.13s;position:relative;}
-    .group-btn:hover{border-color:#444;color:var(--text);}
-    .group-btn.selected{border-color:var(--g-color,var(--accent));color:var(--g-color,var(--accent));background:color-mix(in srgb,var(--g-color,var(--accent)) 8%,transparent);}
-    .group-btn.selected::after{content:'✓';position:absolute;top:4px;right:6px;font-size:9px;color:var(--g-color,var(--accent));}
-    .group-hint{font-size:11px;color:var(--muted);margin-top:10px;text-align:center;}
+    /* Grille groupes musculaires — cartes illustrées */
+    .group-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+    .muscle-card-btn{display:flex;flex-direction:column;align-items:stretch;border-radius:14px;border:2px solid var(--border);background:var(--surface);cursor:pointer;overflow:hidden;transition:all 0.15s;padding:0;font-family:'DM Sans',sans-serif;width:100%;}
+    .muscle-card-btn:active{transform:scale(0.97);}
+    .muscle-card-btn.selected{border-color:var(--g-color,var(--accent));box-shadow:0 0 0 1px var(--g-color,var(--accent)),0 0 18px color-mix(in srgb,var(--g-color,var(--accent)) 35%,transparent);}
+    .muscle-card-img-wrap{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#000;}
+    .muscle-card-img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block;transition:transform 0.2s;}
+    .muscle-card-btn.selected .muscle-card-img{transform:scale(1.05);}
+    .muscle-card-check{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:var(--g-color,var(--accent));display:flex;align-items:center;justify-content:center;font-size:12px;color:#000;font-weight:700;}
+    .muscle-card-label{padding:7px 10px;font-size:13px;font-weight:600;color:var(--muted);text-align:left;}
+    .muscle-card-btn.selected .muscle-card-label{color:var(--g-color,var(--accent));}
+    .group-hint{font-size:11px;color:var(--muted);margin-top:4px;text-align:center;}
     .group-hint span{color:var(--accent);}
     .tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
     .tag{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid;font-size:12px;}
@@ -969,9 +998,18 @@ export default function WorkoutCounter() {
   if (restAlert) return (
     <>
       <style>{css}</style>
-      <div onClick={finishRest} style={{position:"fixed",inset:0,zIndex:999,background:"var(--accent)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:64,color:"#0a0a0a",letterSpacing:"0.05em"}}>C'EST PARTI ! 💥</div>
-        <div style={{fontSize:16,color:"#0a0a0a",opacity:0.7,marginTop:10}}>Repos terminé — appuie pour continuer</div>
+      <div style={{
+        position:"fixed",inset:0,zIndex:999,
+        background:"#e8ff00",
+        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        animation:"restAlertAnim 0.15s ease",
+      }}>
+        <style>{`@keyframes restAlertAnim{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}`}</style>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:72,color:"#0a0a0a",letterSpacing:"0.04em",lineHeight:1,textAlign:"center"}}>
+          C'EST<br/>PARTI !
+        </div>
+        <div style={{fontSize:56,marginTop:8}}>💥</div>
+        <div style={{fontSize:14,color:"#0a0a0a",opacity:0.6,marginTop:16}}>Prêt pour la prochaine série</div>
       </div>
     </>
   );
@@ -1405,11 +1443,14 @@ export default function WorkoutCounter() {
             <div className="section-title">Zones musculaires · choix libre</div>
             <div className="group-grid">
               {DEFAULT_MUSCLE_GROUPS.map(g=>(
-                <button key={g.id} className={`group-btn${selectedGroups.includes(g.id)?" selected":""}`}
-                  style={{"--g-color":g.color}} onClick={()=>toggleGroup(g.id)}>
-                  {MUSCLE_ICONS[g.id]?.(selectedGroups.includes(g.id)?g.color:"#555",28)}
-                  {g.label}
-                </button>
+                <MuscleCard
+                  key={g.id}
+                  groupId={g.id}
+                  color={g.color}
+                  label={g.label}
+                  selected={selectedGroups.includes(g.id)}
+                  onClick={()=>toggleGroup(g.id)}
+                />
               ))}
             </div>
             {selectedGroups.length>0&&(
@@ -1549,8 +1590,9 @@ export default function WorkoutCounter() {
             <div className="card">
               <div className="workout-ex-header">
                 <div className="workout-ex-label">Exercice {currentExIdx+1} / {workoutPlan.length}</div>
+                <MuscleSessionBanner groupId={curEx.group} color={curGroupMeta?.color||"#888"} label={curGroupMeta?.label||""} />
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:2}}>
-                  {MUSCLE_ICONS[curEx.group]?.(curGroupMeta?.color,24)}
+                  <MuscleIcon groupId={curEx.group} color={curGroupMeta?.color||"#888"} size={24} />
                   <div className="workout-ex-name">{curEx.exName}</div>
                 </div>
                 <div style={{fontSize:12,color:curGroupMeta?.color,marginTop:2}}>{curGroupMeta?.label}{curEx.isCardio?" · Cardio":""}</div>

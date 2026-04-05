@@ -233,11 +233,38 @@ export default function WorkoutCounter() {
   const [resumeAvailable, setResumeAvailable] = useState(false);
   const audioCtxRef = useRef(null);
   const [restAlert, setRestAlert] = useState(false);
+  const swRef = useRef(null);
+  const [notifPermission, setNotifPermission] = useState("default");
 
   const [theme, setTheme] = useState(() => {
     try { return {...DEFAULT_THEME,...JSON.parse(localStorage.getItem("rc-theme")||"{}")}; }
     catch { return DEFAULT_THEME; }
   });
+
+  // ── PWA : enregistrement Service Worker + notifications ──
+  useEffect(() => {
+    // Enregistrer le Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        swRef.current = reg;
+      }).catch(() => {});
+
+      // Écouter les messages du SW (REST_DONE quand app en arrière-plan)
+      navigator.serviceWorker.addEventListener("message", (e) => {
+        if (e.data?.type === "REST_DONE") {
+          setRestAlert(true);
+          setTimeout(() => finishRest(), 1500);
+        }
+      });
+    }
+
+    // Demander la permission de notification
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().then(setNotifPermission);
+    } else if ("Notification" in window) {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
 
   // ── Effects ──
   useEffect(() => {
@@ -759,11 +786,22 @@ export default function WorkoutCounter() {
     setRestRemaining(restDuration);
     setRestPaused(false);
     setShowRest(true);
+    // Notifier le Service Worker pour timer en arrière-plan
+    if (swRef.current?.active) {
+      swRef.current.active.postMessage({
+        type: "START_REST",
+        payload: { duration: restDuration, exerciseName: curEx?.exName || "exercice suivant" }
+      });
+    }
   }
   function finishRest() {
     setRestAlert(false);
     setShowRest(false);
     clearInterval(restInterval.current);
+    // Annuler le timer SW si on passe manuellement
+    if (swRef.current?.active) {
+      swRef.current.active.postMessage({ type: "CANCEL_REST" });
+    }
     if(pendingNext.current){pendingNext.current();pendingNext.current=null;}
   }
   function changeRestDuration(d) {

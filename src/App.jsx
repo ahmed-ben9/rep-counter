@@ -986,7 +986,6 @@ export default function WorkoutCounter() {
   const records=computeRecords(history);
   const isNewRec=curEx&&!curEx.isCardio&&repInput&&parseInt(repInput)>0&&checkNewRecord(curEx.exName,parseInt(repInput));
   const curExSets = curEx && !curEx.isCardio ? curEx.sets : [];
-  const todayIdx=(new Date().getDay()+6)%7;
   const lastWeightForCurrentSet = curEx && !curEx.isCardio ? getLastWeight(curEx.exName, currentSetIdx) : null;
   const nextEx = workoutPlan[currentExIdx+1] || null;
   const thisWeekSessions = getThisWeekSessions();

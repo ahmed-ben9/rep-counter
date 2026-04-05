@@ -116,6 +116,7 @@ const PRESET_THEMES = [
 
 const DEFAULT_THEME = { ...PRESET_THEMES[0], wallpaperUrl: "", wallpaperOpacity: "0.15" };
 const REST_PRESETS = [60, 90, 120, 180];
+const QUICK_REPS = [6, 8, 10, 12, 15, 20];
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long" });
@@ -205,6 +206,10 @@ export default function WorkoutCounter() {
     try { return JSON.parse(localStorage.getItem("rc-weekly")||"{}"); } catch { return {}; }
   });
   const [editingDay, setEditingDay] = useState(null);
+  const [weeklyGoal, setWeeklyGoal] = useState(()=>parseInt(localStorage.getItem("rc-weekly-goal")||"3"));
+  const [resumeAvailable, setResumeAvailable] = useState(false);
+  const audioCtxRef = useRef(null);
+  const [restAlert, setRestAlert] = useState(false);
 
   const [theme, setTheme] = useState(() => {
     try { return {...DEFAULT_THEME,...JSON.parse(localStorage.getItem("rc-theme")||"{}")}; }
@@ -214,23 +219,30 @@ export default function WorkoutCounter() {
   // ── Effects ──
   useEffect(() => {
     try { setHistory(JSON.parse(localStorage.getItem("rc-history")||"[]")); } catch {}
+    try {
+      const saved = localStorage.getItem("rc-session-backup");
+      if (saved) { const s = JSON.parse(saved); if (s.workoutPlan?.length > 0) setResumeAvailable(true); }
+    } catch {}
   }, []);
 
-  // ── Son de fin de repos (Web Audio API — aucun fichier nécessaire) ──
+  // ── Son iOS-compatible ──
+  function unlockAudio() {
+    try {
+      if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume();
+    } catch (_) {}
+  }
   function playRestEndSound() {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      // 3 bips courts ascendants
-      [[0, 440, 0.12], [0.18, 550, 0.12], [0.36, 660, 0.2]].forEach(([when, freq, dur]) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+      unlockAudio();
+      const ctx = audioCtxRef.current; if (!ctx) return;
+      [[0, 523, 0.18], [0.22, 659, 0.18], [0.44, 784, 0.28]].forEach(([when, freq, dur]) => {
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.4, ctx.currentTime + when);
+        osc.type = "triangle"; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.7, ctx.currentTime + when);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + when + dur);
-        osc.start(ctx.currentTime + when);
-        osc.stop(ctx.currentTime + when + dur + 0.05);
+        osc.start(ctx.currentTime + when); osc.stop(ctx.currentTime + when + dur + 0.05);
       });
     } catch (_) {}
   }
@@ -246,9 +258,9 @@ export default function WorkoutCounter() {
         setRestRemaining(remaining);
         if (remaining <= 0) {
           clearInterval(restInterval.current);
-          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
           playRestEndSound();
-          setTimeout(() => finishRest(), 400);
+          setRestAlert(true);
+          setTimeout(() => finishRest(), 1500);
         }
       }, 500); // tick toutes les 500ms = plus réactif au retour d'arrière-plan
     } else {
@@ -269,9 +281,9 @@ export default function WorkoutCounter() {
           setRestRemaining(remaining);
           if (remaining <= 0) {
             clearInterval(restInterval.current);
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
             playRestEndSound();
-            setTimeout(() => finishRest(), 400);
+            setRestAlert(true);
+            setTimeout(() => finishRest(), 1500);
           }
         }
         // Chrono séance
@@ -307,6 +319,7 @@ export default function WorkoutCounter() {
   function saveExercises(e) { localStorage.setItem("rc-exercises",JSON.stringify(e)); setEditableExercises(e); }
   function saveCustomExercises(c) { localStorage.setItem("rc-custom-exercises",JSON.stringify(c)); setCustomExercises(c); }
   function saveWeekly(w) { localStorage.setItem("rc-weekly",JSON.stringify(w)); setWeeklyProgram(w); }
+  function saveWeeklyGoal(g) { localStorage.setItem("rc-weekly-goal",String(g)); setWeeklyGoal(g); }
 
   // ── Theme / UI ──
   const isBgLight = theme.bg==="#f5f5f5";
@@ -419,6 +432,11 @@ export default function WorkoutCounter() {
     .go-target{font-size:13px;color:var(--muted);}
     .go-target span{color:var(--text);font-weight:600;}
 
+    /* Boutons reps rapides */
+    .quick-reps{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+    .qr-btn{flex:1;min-width:44px;height:42px;border-radius:8px;border:1px solid var(--border);background:${planItemBg};color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:18px;cursor:pointer;transition:all 0.1s;}
+    .qr-btn:active{transform:scale(0.93);}
+    .qr-btn.selected-qr{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);}
     /* Numpad */
     .rep-entry-label{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;text-align:center;}
     .rep-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
@@ -434,6 +452,7 @@ export default function WorkoutCounter() {
     .weight-label{font-size:12px;color:var(--muted);flex:1;}
     .weight-input{background:${inputBg};border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:20px;text-align:center;width:90px;height:40px;outline:none;padding:0 10px;}
     .weight-input:focus{border-color:var(--accent);}
+    .weight-hint{font-size:11px;color:var(--accent);font-weight:600;}
     .weight-unit{font-size:13px;color:var(--muted);}
 
     /* Cardio */
@@ -609,6 +628,14 @@ export default function WorkoutCounter() {
     .unit-row{display:flex;gap:6px;}
     .unit-btn{flex:1;height:36px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;}
     .unit-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,255,0,0.08);}
+    /* Reprise */
+    .resume-banner{width:100%;max-width:420px;display:flex;align-items:center;gap:12px;padding:14px 16px;background:color-mix(in srgb,var(--accent) 10%,transparent);border:1px solid var(--accent);border-radius:12px;margin-bottom:12px;cursor:pointer;}
+    .resume-text{flex:1;font-size:13px;color:var(--text);}
+    .resume-text strong{color:var(--accent);}
+    .resume-dismiss{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px;}
+    /* Objectif hebdo */
+    .goal-bar-bg{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin:6px 0;}
+    .goal-bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width 0.4s;}
   `;
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -618,6 +645,18 @@ export default function WorkoutCounter() {
   function getGroupMeta(id) { return DEFAULT_MUSCLE_GROUPS.find(g=>g.id===id); }
   function isCardioGroup(groupId) { return getGroupMeta(groupId)?.isCardio || false; }
   function isCardioExercise(ex) { return isCardioGroup(ex.group); }
+  function getLastWeight(exName, setIdx) {
+    for (const session of history) {
+      const ex = session.exercises?.find(e => e.exName === exName && !e.isCardio);
+      if (ex && ex.sets[setIdx]?.weight) return ex.sets[setIdx].weight;
+    }
+    return null;
+  }
+  function getThisWeekSessions() {
+    const now = new Date(); const mon = new Date(now);
+    mon.setDate(now.getDate() - todayIdx); mon.setHours(0,0,0,0);
+    return history.filter(s => new Date(s.date) >= mon).length;
+  }
 
   const DAYS=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
   const DAY_KEYS=["mon","tue","wed","thu","fri","sat","sun"];
@@ -645,6 +684,7 @@ export default function WorkoutCounter() {
   }
 
   function startWorkout() {
+    unlockAudio();
     const plan=selectedExercises.map(ex=>({
       exName:ex.name, group:ex.group,
       isCardio: isCardioGroup(ex.group),
@@ -662,7 +702,22 @@ export default function WorkoutCounter() {
     setStep("workout");
   }
 
+  function resumeWorkout() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("rc-session-backup") || "null");
+      if (!saved) return;
+      setWorkoutPlan(saved.workoutPlan || []); setCurrentExIdx(saved.currentExIdx || 0); setCurrentSetIdx(saved.currentSetIdx || 0);
+      setSelectedGroups(saved.selectedGroups || []); setTotalSets(saved.totalSets || 3); setTargetReps(saved.targetReps || 10);
+      setRepInput(""); setWeightInput("");
+      sessionBaseRef.current = saved.sessionSeconds || 0; sessionStartRef.current = null;
+      setSessionSeconds(saved.sessionSeconds || 0); setSessionTimerActive(true);
+      setResumeAvailable(false); setStep("workout");
+    } catch {}
+  }
+  function dismissResume() { localStorage.removeItem("rc-session-backup"); setResumeAvailable(false); }
+  function setQuickRep(n) { unlockAudio(); setRepInput(String(n)); }
   function numpadPress(val) {
+    unlockAudio();
     setRepInput(prev=>{
       if(val==="del") return prev.slice(0,-1);
       const next=prev+val;
@@ -677,6 +732,7 @@ export default function WorkoutCounter() {
     setShowRest(true);
   }
   function finishRest() {
+    setRestAlert(false);
     setShowRest(false);
     clearInterval(restInterval.current);
     if(pendingNext.current){pendingNext.current();pendingNext.current=null;}
@@ -688,6 +744,7 @@ export default function WorkoutCounter() {
   }
 
   function validateSet() {
+    unlockAudio();
     const reps=parseInt(repInput)||0;
     const weight=parseFloat(weightInput)||null;
     const isLastSet=currentSetIdx+1>=totalSets;
@@ -741,8 +798,17 @@ export default function WorkoutCounter() {
     else finishWorkout(updatedPlan);
   }
 
+  // Sauvegarde auto séance en cours
+  useEffect(() => {
+    if (step === "workout" && workoutPlan.length > 0) {
+      const backup = {workoutPlan, currentExIdx, currentSetIdx, selectedGroups, totalSets, targetReps, sessionSeconds};
+      localStorage.setItem("rc-session-backup", JSON.stringify(backup));
+    }
+  }, [workoutPlan, currentExIdx, currentSetIdx, sessionSeconds]);
+
   function finishWorkout(plan) {
     setSessionTimerActive(false);
+    localStorage.removeItem("rc-session-backup"); setResumeAvailable(false);
     const totalReps=plan.filter(ex=>!ex.isCardio).reduce((acc,ex)=>acc+ex.sets.reduce((a,s)=>a+(s.reps||0),0),0);
     const session={
       id: Date.now().toString(),
@@ -780,6 +846,7 @@ export default function WorkoutCounter() {
     setShowStats(false); setShowWeekly(false);
     setSessionTimerActive(false); setSessionSeconds(0);
     pendingNext.current=null; pendingSessionRef.current=null;
+    localStorage.removeItem("rc-session-backup");
   }
 
   // ── Paramètres ──
@@ -890,6 +957,24 @@ export default function WorkoutCounter() {
   const records=computeRecords(history);
   const isNewRec=curEx&&!curEx.isCardio&&repInput&&parseInt(repInput)>0&&checkNewRecord(curEx.exName,parseInt(repInput));
   const curExSets = curEx && !curEx.isCardio ? curEx.sets : [];
+  const todayIdx=(new Date().getDay()+6)%7;
+  const lastWeightForCurrentSet = curEx && !curEx.isCardio ? getLastWeight(curEx.exName, currentSetIdx) : null;
+  const nextEx = workoutPlan[currentExIdx+1] || null;
+  const thisWeekSessions = getThisWeekSessions();
+  const goalPct = Math.min(100, Math.round((thisWeekSessions / weeklyGoal) * 100));
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  //  ALERTE VISUELLE FIN DE REPOS
+
+  if (restAlert) return (
+    <>
+      <style>{css}</style>
+      <div onClick={finishRest} style={{position:"fixed",inset:0,zIndex:999,background:"var(--accent)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:64,color:"#0a0a0a",letterSpacing:"0.05em"}}>C'EST PARTI ! 💥</div>
+        <div style={{fontSize:16,color:"#0a0a0a",opacity:0.7,marginTop:10}}>Repos terminé — appuie pour continuer</div>
+      </div>
+    </>
+  );
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   //  REPOS
@@ -1291,6 +1376,15 @@ export default function WorkoutCounter() {
           </div>
         </div>
 
+        {/* Bannière reprise séance */}
+        {resumeAvailable && step === "groups" && (
+          <div className="resume-banner" onClick={resumeWorkout}>
+            <span style={{fontSize:20}}>🔄</span>
+            <div className="resume-text"><strong>Séance interrompue</strong> — appuie pour reprendre là où tu t'es arrêté.</div>
+            <button className="resume-dismiss" onClick={e=>{e.stopPropagation();dismissResume();}}>×</button>
+          </div>
+        )}
+
         {step==="workout"&&(
           <div className="session-timer">
             <span className="timer-icon">⏱️</span>
@@ -1516,7 +1610,10 @@ export default function WorkoutCounter() {
 
                   {showWeight&&(
                     <div className="weight-row">
-                      <div className="weight-label">Poids utilisé (optionnel)</div>
+                      <div>
+                        <div className="weight-label">Poids utilisé (optionnel)</div>
+                        {lastWeightForCurrentSet&&<div className="weight-hint">↑ Dernière fois : {lastWeightForCurrentSet}{weightUnit}</div>}
+                      </div>
                       <input className="weight-input" type="number" placeholder="—" step="0.5" min="0"
                         value={weightInput} onChange={e=>setWeightInput(e.target.value)}/>
                       <span className="weight-unit">{weightUnit}</span>
@@ -1530,6 +1627,11 @@ export default function WorkoutCounter() {
                   )}
 
                   <div className="rep-entry-label">Reps effectuées</div>
+                  <div className="quick-reps">
+                    {QUICK_REPS.map(n=>(
+                      <button key={n} className={`qr-btn${repInput===String(n)?" selected-qr":""}`} onClick={()=>setQuickRep(n)}>{n}</button>
+                    ))}
+                  </div>
                   <div className={`rep-display-val${repInput?" has-val":""}`}>{repInput||"—"}</div>
                   <div className="rep-numpad">
                     {["1","2","3","4","5","6","7","8","9"].map(n=>(

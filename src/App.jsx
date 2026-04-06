@@ -6,13 +6,14 @@ import { useState, useEffect, useRef } from "react";
 
 // Chemins relatifs — place les fichiers dans un dossier "images/" à côté de App.jsx
 const MUSCLE_IMAGES = {
-  dos:     "https://i.ibb.co/sJDcDQCz/dos.png",
-  pecs:    "https://i.ibb.co/pvPrdMBw/pecs.png",
-  epaules: "https://i.ibb.co/5g2pVh4Y/epaules.png",
-  jambes:  "https://i.ibb.co/3Yhnhtnw/jambes.png",
-  bras:    "https://i.ibb.co/84tJDgq4/bras.png",
-  cardio:  "https://i.ibb.co/mCkLrtG3/cardio.png",
-  abdos:   "https://i.ibb.co/Pv53Lj7G/abdos.png",
+  dos:      "https://i.ibb.co/sJDcDQCz/dos.png",
+  pecs:     "https://i.ibb.co/pvPrdMBw/pecs.png",
+  epaules:  "https://i.ibb.co/5g2pVh4Y/epaules.png",
+  jambes:   "https://i.ibb.co/3Yhnhtnw/jambes.png",
+  bras:     "https://i.ibb.co/84tJDgq4/bras.png",
+  cardio:   "https://i.ibb.co/mCkLrtG3/cardio.png",
+  abdos:    "https://i.ibb.co/Pv53Lj7G/abdos.png",
+  etirement:"https://i.ibb.co/hx16VJsp/etirement-mobilite.png",
 };
 
 // Petite icône ronde pour les endroits qui utilisaient les SVG 28px (programme hebdo, tags, etc.)
@@ -109,24 +110,28 @@ const MUSCLE_ICONS = Object.fromEntries(
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const DEFAULT_MUSCLE_GROUPS = [
-  { id: "dos",     label: "Dos",     color: "#4fc3f7", isCardio: false },
-  { id: "pecs",    label: "Pecs",    color: "#e8ff00", isCardio: false },
-  { id: "epaules", label: "Épaules", color: "#ff9800", isCardio: false },
-  { id: "jambes",  label: "Jambes",  color: "#ce93d8", isCardio: false },
-  { id: "bras",    label: "Bras",    color: "#f48fb1", isCardio: false },
-  { id: "cardio",  label: "Cardio",  color: "#ff4d4d", isCardio: true  },
-  { id: "abdos",   label: "Abdos",   color: "#00e676", isCardio: false },
+  { id: "dos",      label: "Dos",               color: "#4fc3f7", isCardio: false, isTimer: false },
+  { id: "pecs",     label: "Pecs",              color: "#e8ff00", isCardio: false, isTimer: false },
+  { id: "epaules",  label: "Épaules",           color: "#ff9800", isCardio: false, isTimer: false },
+  { id: "jambes",   label: "Jambes",            color: "#ce93d8", isCardio: false, isTimer: false },
+  { id: "bras",     label: "Bras",              color: "#f48fb1", isCardio: false, isTimer: false },
+  { id: "cardio",   label: "Cardio",            color: "#ff4d4d", isCardio: true,  isTimer: true  },
+  { id: "abdos",    label: "Abdos",             color: "#00e676", isCardio: false, isTimer: false },
+  { id: "etirement",label: "Étirement & Mobilité", color: "#64b5f6", isCardio: false, isTimer: true  },
 ];
 
 const DEFAULT_EXERCISES = {
-  dos:     ["Tractions", "Rowing barre", "Tirage poulie", "Soulevé de terre", "Rowing haltère"],
-  pecs:    ["Développé couché", "Développé incliné", "Écarté haltères", "Pompes", "Dips"],
-  epaules: ["Développé militaire", "Élévations latérales", "Oiseau", "Arnold press", "Shrugs"],
-  jambes:  ["Squat", "Presse à cuisses", "Fentes", "Leg curl", "Mollets debout"],
-  bras:    ["Curl biceps", "Marteau", "Barre EZ", "Dips triceps", "Extensions nuque"],
-  cardio:  ["Course à pied", "Vélo", "Corde à sauter", "Rameur", "Natation"],
-  abdos:   ["Crunchs", "Planche", "Relevé de jambes", "Bicycle", "Russian twist"],
+  dos:      ["Tractions", "Rowing barre", "Tirage poulie", "Soulevé de terre", "Rowing haltère"],
+  pecs:     ["Développé couché", "Développé incliné", "Écarté haltères", "Pompes", "Dips"],
+  epaules:  ["Développé militaire", "Élévations latérales", "Oiseau", "Arnold press", "Shrugs"],
+  jambes:   ["Squat", "Presse à cuisses", "Fentes", "Leg curl", "Mollets debout"],
+  bras:     ["Curl biceps", "Marteau", "Barre EZ", "Dips triceps", "Extensions nuque"],
+  cardio:   ["Course à pied", "Vélo", "Corde à sauter", "Rameur", "Natation"],
+  abdos:    ["Crunchs", "Planche", "Relevé de jambes", "Bicycle", "Russian twist"],
+  etirement:["Étirement ischio-jambiers", "Pigeon yoga", "Mobilité des hanches", "Étirement pectoraux", "Rotation thoracique", "Étirement mollets", "Cat-Cow", "Étirement quadriceps", "Mobilité épaules", "Child's pose"],
 };
+
+const CARDIO_TIMER_PRESETS = [15, 20, 30, 45, 60]; // minutes
 
 const PRESET_THEMES = [
   { id:"dark",   name:"Défaut",       bg:"#0a0a0a", surface:"#141414", border:"#222222", accent:"#e8ff00", accent2:"#ff4d4d", text:"#f0f0f0", muted:"#555555", success:"#00e676" },
@@ -189,11 +194,11 @@ export default function WorkoutCounter() {
   const [weightInput, setWeightInput] = useState("");
   const [sessionNote, setSessionNote] = useState("");
 
-  // Cardio fields
-  const [cardioMinutes, setCardioMinutes] = useState("");
-  const [cardioSeconds, setCardioSeconds2] = useState("");
-  const [cardioDistance, setCardioDistance] = useState("");
-  const [cardioBpm, setCardioBpm] = useState("");
+  // Cardio / Timer fields
+  const [cardioTimerMinutes, setCardioTimerMinutes] = useState(30);
+  const [cardioElapsed, setCardioElapsed] = useState(0);
+  const [cardioRunning, setCardioRunning] = useState(false);
+  const cardioIntervalRef = useRef(null);
 
   // Session timer — basé sur Date.now() pour résister à l'arrière-plan
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -237,9 +242,28 @@ export default function WorkoutCounter() {
   const [notifPermission, setNotifPermission] = useState("default");
 
   const [theme, setTheme] = useState(() => {
-    try { return {...DEFAULT_THEME,...JSON.parse(localStorage.getItem("rc-theme")||"{}")}; }
+    try {
+      const saved = localStorage.getItem("rc-theme");
+      if (saved) return {...DEFAULT_THEME,...JSON.parse(saved)};
+      // Auto-detect système si pas de thème sauvegardé
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      return prefersDark ? DEFAULT_THEME : {...PRESET_THEMES[5], wallpaperUrl:"", wallpaperOpacity:"0.15"};
+    }
     catch { return DEFAULT_THEME; }
   });
+
+  // ── Auto dark/light selon le système ──
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e) => {
+      // Ne changer que si l'utilisateur n'a pas manuellement choisi un thème
+      if (!localStorage.getItem("rc-theme")) {
+        setTheme(e.matches ? DEFAULT_THEME : {...PRESET_THEMES[5], wallpaperUrl:"", wallpaperOpacity:"0.15"});
+      }
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   // ── PWA : enregistrement Service Worker + notifications ──
   useEffect(() => {
@@ -250,18 +274,16 @@ export default function WorkoutCounter() {
       }).catch(() => {});
 
       // Écouter les messages du SW (REST_DONE quand app en arrière-plan)
+      // On utilise juste setRestAlert — finishRest sera appelé après le délai dans le rendu
       navigator.serviceWorker.addEventListener("message", (e) => {
         if (e.data?.type === "REST_DONE") {
           setRestAlert(true);
-          setTimeout(() => finishRest(), 1500);
         }
       });
     }
 
-    // Demander la permission de notification
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission().then(setNotifPermission);
-    } else if ("Notification" in window) {
+    // Lire la permission actuelle sans la demander automatiquement (iOS exige un geste)
+    if ("Notification" in window) {
       setNotifPermission(Notification.permission);
     }
   }, []);
@@ -295,6 +317,8 @@ export default function WorkoutCounter() {
         osc.start(ctx.currentTime + when); osc.stop(ctx.currentTime + when + dur + 0.05);
       });
     } catch (_) {}
+    // Vibration (Android)
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]); } catch (_) {}
   }
 
   // ── Timer de repos : basé sur Date.now() → résiste à l'arrière-plan ──
@@ -535,6 +559,10 @@ export default function WorkoutCounter() {
     /* Repos */
     .rest-overlay{position:fixed;inset:0;z-index:100;background:rgba(5,5,5,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;animation:fadeIn 0.2s ease;}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+    @keyframes slideInLeft{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+    .ex-slide-in{animation:slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94);}
+    .card-anim{animation:fadeIn 0.25s ease;}
     .rest-title{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
     .rest-exercise{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--text);margin-bottom:28px;text-align:center;}
     .rest-ring-wrap{position:relative;width:220px;height:220px;margin-bottom:28px;}
@@ -700,10 +728,12 @@ export default function WorkoutCounter() {
 
   function getGroupMeta(id) { return DEFAULT_MUSCLE_GROUPS.find(g=>g.id===id); }
   function isCardioGroup(groupId) { return getGroupMeta(groupId)?.isCardio || false; }
+  function isTimerGroup(groupId) { return getGroupMeta(groupId)?.isTimer || false; }
   function isCardioExercise(ex) { return isCardioGroup(ex.group); }
+  function isTimerExercise(ex) { return isTimerGroup(ex.group); }
   function getLastWeight(exName, setIdx) {
     for (const session of history) {
-      const ex = session.exercises?.find(e => e.exName === exName && !e.isCardio);
+      const ex = session.exercises?.find(e => e.exName === exName && !e.isTimer);
       if (ex && ex.sets[setIdx]?.weight) return ex.sets[setIdx].weight;
     }
     return null;
@@ -744,15 +774,17 @@ export default function WorkoutCounter() {
     const plan=selectedExercises.map(ex=>({
       exName:ex.name, group:ex.group,
       isCardio: isCardioGroup(ex.group),
-      sets: isCardioGroup(ex.group)
-        ? [{status:"active", minutes:"", seconds:"", distance:"", bpm:""}]
+      isTimer: isTimerGroup(ex.group),
+      timerMinutes: cardioTimerMinutes,
+      sets: isTimerGroup(ex.group)
+        ? [{status:"active", durationMinutes: cardioTimerMinutes, elapsedSeconds: 0}]
         : Array.from({length:totalSets},()=>({reps:null,weight:null,status:"pending"}))
     }));
     if(plan.length>0) plan[0].sets[0].status="active";
     setWorkoutPlan(plan);
     setCurrentExIdx(0); setCurrentSetIdx(0);
     setRepInput(""); setWeightInput("");
-    setCardioMinutes(""); setCardioSeconds2(""); setCardioDistance(""); setCardioBpm("");
+    setCardioElapsed(0); setCardioRunning(false);
     sessionBaseRef.current = 0; sessionStartRef.current = null;
     setSessionSeconds(0); setSessionTimerActive(true);
     setStep("workout");
@@ -842,16 +874,17 @@ export default function WorkoutCounter() {
     else doNext();
   }
 
-  function validateCardio() {
-    const mins=parseInt(cardioMinutes)||0;
-    const secs=parseInt(cardioSeconds)||0;
-    const dist=parseFloat(cardioDistance)||null;
-    const bpm=parseInt(cardioBpm)||null;
+  function validateTimer() {
+    // Arrêter le timer cardio
+    clearInterval(cardioIntervalRef.current);
+    setCardioRunning(false);
     const isLastEx=currentExIdx+1>=workoutPlan.length;
+    const elapsedMins = Math.floor(cardioElapsed/60);
+    const elapsedSecs = cardioElapsed%60;
 
     const updatedPlan=workoutPlan.map((ex,ei)=>{
       if(ei===currentExIdx){
-        return{...ex,sets:[{status:"done",minutes:mins,seconds:secs,distance:dist,bpm}]};
+        return{...ex,sets:[{status:"done", durationMinutes: cardioTimerMinutes, elapsedSeconds: cardioElapsed}]};
       }
       if(!isLastEx&&ei===currentExIdx+1){
         return{...ex,sets:ex.sets.map((s,si)=>si===0?{...s,status:"active"}:s)};
@@ -859,11 +892,43 @@ export default function WorkoutCounter() {
       return ex;
     });
     setWorkoutPlan(updatedPlan);
-    setCardioMinutes(""); setCardioSeconds2(""); setCardioDistance(""); setCardioBpm("");
+    setCardioElapsed(0); setCardioRunning(false);
 
-    if(!isLastEx){ setCurrentExIdx(e=>e+1); setCurrentSetIdx(0); }
-    else finishWorkout(updatedPlan);
+    const doNext=()=>{
+      if(!isLastEx){ setCurrentExIdx(e=>e+1); setCurrentSetIdx(0); setCardioElapsed(0); }
+      else finishWorkout(updatedPlan);
+    };
+    // Proposer un temps de repos après cardio aussi
+    if(!isLastEx) startRest(doNext);
+    else doNext();
   }
+
+  function toggleCardioTimer() {
+    if(cardioRunning){
+      clearInterval(cardioIntervalRef.current);
+      setCardioRunning(false);
+    } else {
+      setCardioRunning(true);
+      const startTime = Date.now() - cardioElapsed*1000;
+      cardioIntervalRef.current = setInterval(()=>{
+        const elapsed = Math.floor((Date.now()-startTime)/1000);
+        setCardioElapsed(elapsed);
+        // Auto-terminer quand le temps est écoulé
+        if(elapsed >= cardioTimerMinutes*60){
+          clearInterval(cardioIntervalRef.current);
+          setCardioRunning(false);
+          playRestEndSound();
+        }
+      },1000);
+    }
+  }
+
+  // Nettoyer le timer cardio si on change d'exercice
+  useEffect(()=>{
+    clearInterval(cardioIntervalRef.current);
+    setCardioRunning(false);
+    setCardioElapsed(0);
+  },[currentExIdx]);
 
   // Sauvegarde auto séance en cours
   useEffect(() => {
@@ -875,19 +940,20 @@ export default function WorkoutCounter() {
 
   function finishWorkout(plan) {
     setSessionTimerActive(false);
+    clearInterval(cardioIntervalRef.current);
     localStorage.removeItem("rc-session-backup"); setResumeAvailable(false);
-    const totalReps=plan.filter(ex=>!ex.isCardio).reduce((acc,ex)=>acc+ex.sets.reduce((a,s)=>a+(s.reps||0),0),0);
+    const totalReps=plan.filter(ex=>!ex.isTimer).reduce((acc,ex)=>acc+ex.sets.reduce((a,s)=>a+(s.reps||0),0),0);
     const session={
       id: Date.now().toString(),
       date: new Date().toISOString(),
       groups: selectedGroups,
       exercises: plan.map(ex=>({
-        exName:ex.exName, group:ex.group, isCardio:ex.isCardio,
-        sets: ex.isCardio
-          ? ex.sets.map(s=>({minutes:s.minutes||0,seconds:s.seconds||0,distance:s.distance,bpm:s.bpm}))
+        exName:ex.exName, group:ex.group, isCardio:ex.isCardio, isTimer:ex.isTimer,
+        sets: ex.isTimer
+          ? ex.sets.map(s=>({durationMinutes:s.durationMinutes||0, elapsedSeconds:s.elapsedSeconds||0}))
           : ex.sets.map(s=>({reps:s.reps||0,weight:s.weight})),
       })),
-      totalReps, totalSets:totalSets*plan.filter(e=>!e.isCardio).length,
+      totalReps, totalSets:totalSets*plan.filter(e=>!e.isTimer).length,
       targetReps, duration:sessionSeconds, note:"",
     };
     pendingSessionRef.current=session;
@@ -908,7 +974,8 @@ export default function WorkoutCounter() {
     setCustomInput(""); setCustomGroup(null); setTotalSets(3); setTargetReps(10);
     setWorkoutPlan([]); setCurrentExIdx(0); setCurrentSetIdx(0);
     setRepInput(""); setWeightInput(""); setSessionNote("");
-    setCardioMinutes(""); setCardioSeconds2(""); setCardioDistance(""); setCardioBpm("");
+    setCardioElapsed(0); setCardioRunning(false);
+    clearInterval(cardioIntervalRef.current);
     setShowRest(false); setShowHistory(false); setShowSettings(false);
     setShowStats(false); setShowWeekly(false);
     setSessionTimerActive(false); setSessionSeconds(0);
@@ -943,7 +1010,7 @@ export default function WorkoutCounter() {
   function computeRecords(hist) {
     const r={};
     hist.forEach(s=>s.exercises.forEach(ex=>{
-      if(ex.isCardio) return;
+      if(ex.isTimer) return;
       const mx=Math.max(...ex.sets.map(s=>s.reps||0));
       if(!r[ex.exName]||mx>r[ex.exName]) r[ex.exName]=mx;
     }));
@@ -960,7 +1027,7 @@ export default function WorkoutCounter() {
       sessions.forEach(s=>{
         if(statsGroup==="all") reps+=s.totalReps||0;
         else s.exercises.forEach(ex=>{
-          if(ex.group===statsGroup&&!ex.isCardio) reps+=ex.sets.reduce((a,r)=>a+(r.reps||0),0);
+          if(ex.group===statsGroup&&!ex.isTimer) reps+=ex.sets.reduce((a,r)=>a+(r.reps||0),0);
         });
       });
       const d=new Date(day);
@@ -973,20 +1040,20 @@ export default function WorkoutCounter() {
     return{totalReps:tr,totalSessions:f.length,avgReps:f.length>0?Math.round(tr/f.length):0};
   }
   function exportCSV() {
-    const lines=["Date,Heure,Groupes,Exercice,Type,Série,Reps,Poids,Durée (min),Distance (km),BPM max,Note"];
+    const lines=["Date,Heure,Groupes,Exercice,Type,Série,Reps,Poids,Durée,Note"];
     history.forEach(s=>{
       const date=formatDate(s.date),time=formatTime(s.date);
       const groups=s.groups.map(g=>getGroupMeta(g)?.label||g).join("+");
       const note=s.note||"";
       s.exercises.forEach(ex=>{
-        if(ex.isCardio){
+        if(ex.isTimer){
           ex.sets.forEach((set,i)=>{
-            const dur=`${set.minutes||0}:${pad(set.seconds||0)}`;
-            lines.push(`"${date}","${time}","${groups}","${ex.exName}","Cardio",${i+1},,,"${dur}",${set.distance||""},${set.bpm||""},"${note}"`);
+            const elapsed=`${pad(Math.floor((set.elapsedSeconds||0)/60))}:${pad((set.elapsedSeconds||0)%60)}`;
+            lines.push(`"${date}","${time}","${groups}","${ex.exName}","Timer",${i+1},,,${elapsed},"${note}"`);
           });
         } else {
           ex.sets.forEach((set,i)=>{
-            lines.push(`"${date}","${time}","${groups}","${ex.exName}","Muscu",${i+1},${set.reps||0},${set.weight||""},,,,,"${note}"`);
+            lines.push(`"${date}","${time}","${groups}","${ex.exName}","Muscu",${i+1},${set.reps||0},${set.weight||""},,,"${note}"`);
           });
         }
       });
@@ -1008,7 +1075,7 @@ export default function WorkoutCounter() {
   // ── Computed ──
   const curEx=workoutPlan[currentExIdx];
   const curGroupMeta=curEx?getGroupMeta(curEx.group):null;
-  const totalRepsDone=workoutPlan.filter(e=>!e.isCardio).reduce((acc,ex)=>acc+ex.sets.reduce((a,s)=>a+(s.reps||0),0),0);
+  const totalRepsDone=workoutPlan.filter(e=>!e.isTimer).reduce((acc,ex)=>acc+ex.sets.reduce((a,s)=>a+(s.reps||0),0),0);
   const STEPS=["groups","exercises","config","workout"];
   const R=96,CIRC=2*Math.PI*R;
   const restPct=restDuration>0?restRemaining/restDuration:0;
@@ -1022,9 +1089,9 @@ export default function WorkoutCounter() {
   const maxBar=Math.max(...chartData.map(d=>d.reps),1);
   const statsNumbers=getStatsNumbers();
   const records=computeRecords(history);
-  const isNewRec=curEx&&!curEx.isCardio&&repInput&&parseInt(repInput)>0&&checkNewRecord(curEx.exName,parseInt(repInput));
-  const curExSets = curEx && !curEx.isCardio ? curEx.sets : [];
-  const lastWeightForCurrentSet = curEx && !curEx.isCardio ? getLastWeight(curEx.exName, currentSetIdx) : null;
+  const isNewRec=curEx&&!curEx.isTimer&&repInput&&parseInt(repInput)>0&&checkNewRecord(curEx.exName,parseInt(repInput));
+  const curExSets = curEx && !curEx.isTimer ? curEx.sets : [];
+  const lastWeightForCurrentSet = curEx && !curEx.isTimer ? getLastWeight(curEx.exName, currentSetIdx) : null;
   const nextEx = workoutPlan[currentExIdx+1] || null;
   const thisWeekSessions = getThisWeekSessions();
   const goalPct = Math.min(100, Math.round((thisWeekSessions / weeklyGoal) * 100));
@@ -1145,14 +1212,12 @@ export default function WorkoutCounter() {
                           {session.note&&<div className="hist-note">📝 {session.note}</div>}
                           {session.exercises.map((ex,i)=>(
                             <div key={i}>
-                              <div className="hist-ex-name">{ex.isCardio?"🏃 ":""}{ex.exName}</div>
+                              <div className="hist-ex-name">{ex.isTimer?"⏱ ":""}{ex.exName}</div>
                               <div className="hist-sets-row">
-                                {ex.isCardio
+                                {ex.isTimer
                                   ? ex.sets.map((s,si)=>(
                                     <div key={si} className="hist-set-chip">
-                                      ⏱ {s.minutes||0}:{pad(s.seconds||0)}
-                                      {s.distance?` · ${s.distance}km`:""}
-                                      {s.bpm?` · ${s.bpm}bpm`:""}
+                                      {pad(Math.floor((s.elapsedSeconds||0)/60))}:{pad((s.elapsedSeconds||0)%60)} / {s.durationMinutes||0}min
                                     </div>
                                   ))
                                   : ex.sets.map((s,si)=>(
@@ -1460,6 +1525,18 @@ export default function WorkoutCounter() {
           </div>
         )}
 
+        {/* Bannière activation notifications */}
+        {"Notification" in window && notifPermission !== "granted" && notifPermission !== "denied" && step === "groups" && (
+          <div className="resume-banner" style={{borderColor:"#ff9800",background:"rgba(255,152,0,0.1)"}}
+            onClick={()=>{ Notification.requestPermission().then(p => setNotifPermission(p)); }}>
+            <span style={{fontSize:20}}>🔔</span>
+            <div className="resume-text" style={{color:"var(--text)"}}>
+              <strong style={{color:"#ff9800"}}>Activer les notifications</strong> — sois alerté quand le repos est terminé, même en arrière-plan.
+            </div>
+            <span style={{fontSize:18,color:"#ff9800"}}>→</span>
+          </div>
+        )}
+
         {step==="workout"&&(
           <div className="session-timer">
             <span className="timer-icon">⏱️</span>
@@ -1565,49 +1642,71 @@ export default function WorkoutCounter() {
         {/* CONFIG */}
         {step==="config"&&(
           <>
-            <div className="card">
-              <div className="section-title">Configuration — Musculation</div>
-              <div className="config-row">
-                <div className="config-label">Séries par exercice</div>
-                <div className="stepper">
-                  <button className="stepper-btn" onClick={()=>setTotalSets(s=>Math.max(1,s-1))}>−</button>
-                  <div className="stepper-val">{totalSets}</div>
-                  <button className="stepper-btn" onClick={()=>setTotalSets(s=>Math.min(10,s+1))}>+</button>
+            {/* Config muscu — seulement si des exercices muscu sont sélectionnés */}
+            {selectedExercises.some(ex=>!isTimerGroup(ex.group))&&(
+              <div className="card">
+                <div className="section-title">Configuration — Musculation</div>
+                <div className="config-row">
+                  <div className="config-label">Séries par exercice</div>
+                  <div className="stepper">
+                    <button className="stepper-btn" onClick={()=>setTotalSets(s=>Math.max(1,s-1))}>−</button>
+                    <div className="stepper-val">{totalSets}</div>
+                    <button className="stepper-btn" onClick={()=>setTotalSets(s=>Math.min(10,s+1))}>+</button>
+                  </div>
+                </div>
+                <div className="config-row">
+                  <div className="config-label">Reps cibles</div>
+                  <div className="stepper">
+                    <button className="stepper-btn" onClick={()=>setTargetReps(r=>Math.max(1,r-1))}>−</button>
+                    <div className="stepper-val">{targetReps}</div>
+                    <button className="stepper-btn" onClick={()=>setTargetReps(r=>Math.min(50,r+1))}>+</button>
+                  </div>
+                </div>
+                <div className="config-row" style={{marginBottom:0}}>
+                  <div className="config-label">Repos entre séries</div>
+                  <div style={{display:"flex",gap:6}}>
+                    {REST_PRESETS.map(s=>(
+                      <button key={s} onClick={()=>setRestDuration(s)}
+                        style={{background:restDuration===s?"var(--accent)":"transparent",border:`1px solid ${restDuration===s?"var(--accent)":"var(--border)"}`,borderRadius:6,padding:"6px 10px",color:restDuration===s?"#0a0a0a":"var(--muted)",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                        {s<60?`${s}s`:`${s/60}min`}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="config-row">
-                <div className="config-label">Reps cibles</div>
-                <div className="stepper">
-                  <button className="stepper-btn" onClick={()=>setTargetReps(r=>Math.max(1,r-1))}>−</button>
-                  <div className="stepper-val">{targetReps}</div>
-                  <button className="stepper-btn" onClick={()=>setTargetReps(r=>Math.min(50,r+1))}>+</button>
+            )}
+
+            {/* Config cardio/étirement — seulement si des exercices timer sont sélectionnés */}
+            {selectedExercises.some(ex=>isTimerGroup(ex.group))&&(
+              <div className="card">
+                <div className="section-title">Configuration — Cardio & Étirement</div>
+                <div className="config-row" style={{marginBottom:0}}>
+                  <div className="config-label">Durée de l'exercice</div>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {CARDIO_TIMER_PRESETS.map(m=>(
+                      <button key={m} onClick={()=>setCardioTimerMinutes(m)}
+                        style={{background:cardioTimerMinutes===m?"var(--accent2)":"transparent",border:`1px solid ${cardioTimerMinutes===m?"var(--accent2)":"var(--border)"}`,borderRadius:6,padding:"6px 10px",color:cardioTimerMinutes===m?"#fff":"var(--muted)",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                        {m}min
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="config-row" style={{marginBottom:0}}>
-                <div className="config-label">Repos entre séries</div>
-                <div style={{display:"flex",gap:6}}>
-                  {REST_PRESETS.map(s=>(
-                    <button key={s} onClick={()=>setRestDuration(s)}
-                      style={{background:restDuration===s?"var(--accent)":"transparent",border:`1px solid ${restDuration===s?"var(--accent)":"var(--border)"}`,borderRadius:6,padding:"6px 10px",color:restDuration===s?"#0a0a0a":"var(--muted)",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                      {s<60?`${s}s`:`${s/60}min`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            )}
+
             <div className="card">
               <div className="section-title">Programme de la séance</div>
               <div className="plan-list">
                 {selectedExercises.map((ex,i)=>{
                   const g=getGroupMeta(ex.group);
-                  const isC=isCardioGroup(ex.group);
+                  const isT=isTimerGroup(ex.group);
                   return(
                     <div key={i} className="plan-item">
                       <div className="plan-idx">{i+1}</div>
                       <div style={{marginRight:6}}>{MUSCLE_ICONS[ex.group]?.(g.color,18)}</div>
                       <div className="plan-info">
                         <div className="plan-name">{ex.name}</div>
-                        <div className="plan-detail" style={{color:g.color}}>{g.label} {isC?"· Cardio":`· ${totalSets}×${targetReps}`}</div>
+                        <div className="plan-detail" style={{color:g.color}}>{g.label} {isT?`· ${cardioTimerMinutes}min`:`· ${totalSets}×${targetReps}`}</div>
                       </div>
                     </div>
                   );
@@ -1624,7 +1723,7 @@ export default function WorkoutCounter() {
         {/* WORKOUT */}
         {step==="workout"&&curEx&&(
           <>
-            <div className="card">
+            <div className="card ex-slide-in" key={`ex-${currentExIdx}`}>
               <div className="workout-ex-header">
                 <div className="workout-ex-label">Exercice {currentExIdx+1} / {workoutPlan.length}</div>
                 <MuscleSessionBanner groupId={curEx.group} color={curGroupMeta?.color||"#888"} label={curGroupMeta?.label||""} />
@@ -1632,40 +1731,61 @@ export default function WorkoutCounter() {
                   <MuscleIcon groupId={curEx.group} color={curGroupMeta?.color||"#888"} size={24} />
                   <div className="workout-ex-name">{curEx.exName}</div>
                 </div>
-                <div style={{fontSize:12,color:curGroupMeta?.color,marginTop:2}}>{curGroupMeta?.label}{curEx.isCardio?" · Cardio":""}</div>
+                <div style={{fontSize:12,color:curGroupMeta?.color,marginTop:2}}>{curGroupMeta?.label}{curEx.isTimer?" · Timer":""}</div>
               </div>
 
-              {/* ── CARDIO ── */}
-              {curEx.isCardio?(
+              {/* ── TIMER (CARDIO / ÉTIREMENT) ── */}
+              {curEx.isTimer?(
                 <div className="cardio-zone">
-                  <div style={{fontSize:11,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"0.12em",textAlign:"center",marginBottom:4}}>
-                    Saisir les données de la session
+                  {/* Affichage timer circulaire */}
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,padding:"16px 0"}}>
+                    <div style={{position:"relative",width:180,height:180}}>
+                      <svg width="180" height="180" viewBox="0 0 180 180" style={{transform:"rotate(-90deg)"}}>
+                        <circle cx="90" cy="90" r="80" fill="none" stroke="#1a1a1a" strokeWidth="8"/>
+                        <circle cx="90" cy="90" r="80" fill="none"
+                          stroke={curGroupMeta?.color||"var(--accent2)"}
+                          strokeWidth="8" strokeLinecap="round"
+                          strokeDasharray={2*Math.PI*80}
+                          strokeDashoffset={2*Math.PI*80*(1 - Math.min(cardioElapsed/(cardioTimerMinutes*60),1))}
+                          style={{transition:"stroke-dashoffset 1s linear"}}
+                        />
+                      </svg>
+                      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:48,color:curGroupMeta?.color||"var(--accent2)",lineHeight:1}}>
+                          {pad(Math.floor(cardioElapsed/60))}:{pad(cardioElapsed%60)}
+                        </div>
+                        <div style={{fontSize:12,color:"var(--muted)",marginTop:4}}>
+                          / {cardioTimerMinutes}:00
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bouton play/pause */}
+                    <button onClick={toggleCardioTimer} style={{
+                      width:64,height:64,borderRadius:"50%",border:`2px solid ${curGroupMeta?.color||"var(--accent2)"}`,
+                      background:"transparent",color:curGroupMeta?.color||"var(--accent2)",
+                      fontSize:28,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"
+                    }}>
+                      {cardioRunning ? "⏸" : "▶"}
+                    </button>
+
+                    {/* Changer la durée pendant l'exercice */}
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center",marginTop:4}}>
+                      {CARDIO_TIMER_PRESETS.map(m=>(
+                        <button key={m} onClick={()=>{setCardioTimerMinutes(m);setCardioElapsed(0);setCardioRunning(false);clearInterval(cardioIntervalRef.current);}}
+                          style={{background:cardioTimerMinutes===m?(curGroupMeta?.color||"var(--accent2)")+"22":"transparent",
+                            border:`1px solid ${cardioTimerMinutes===m?(curGroupMeta?.color||"var(--accent2)"):"var(--border)"}`,
+                            borderRadius:6,padding:"5px 10px",
+                            color:cardioTimerMinutes===m?(curGroupMeta?.color||"var(--accent2)"):"var(--muted)",
+                            fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                          {m}min
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="cardio-row">
-                    <div className="cardio-label">⏱ Durée</div>
-                    <input className="cardio-input" type="number" placeholder="00" min="0" max="999"
-                      value={cardioMinutes} onChange={e=>setCardioMinutes(e.target.value)} style={{width:70}}/>
-                    <span className="cardio-sep">:</span>
-                    <input className="cardio-input" type="number" placeholder="00" min="0" max="59"
-                      value={cardioSeconds} onChange={e=>setCardioSeconds2(e.target.value)} style={{width:70}}/>
-                    <span className="cardio-unit">min:sec</span>
-                  </div>
-                  <div className="cardio-row">
-                    <div className="cardio-label">📍 Distance</div>
-                    <input className="cardio-input" type="number" placeholder="0.0" step="0.1" min="0"
-                      value={cardioDistance} onChange={e=>setCardioDistance(e.target.value)}/>
-                    <span className="cardio-unit">km</span>
-                  </div>
-                  <div className="cardio-row">
-                    <div className="cardio-label">❤️ BPM max</div>
-                    <input className="cardio-bpm-input" type="number" placeholder="—" min="0" max="250"
-                      value={cardioBpm} onChange={e=>setCardioBpm(e.target.value)}/>
-                    <span className="cardio-unit">bpm</span>
-                  </div>
-                  <button className="validate-btn" style={{marginTop:8}}
-                    onClick={validateCardio}
-                    disabled={!cardioMinutes&&!cardioSeconds&&!cardioDistance}>
-                    ✓ VALIDER LA SESSION CARDIO
+
+                  <button className="validate-btn" style={{marginTop:8}} onClick={validateTimer}>
+                    ✓ VALIDER — TEMPS : {pad(Math.floor(cardioElapsed/60))}:{pad(cardioElapsed%60)}
                   </button>
                 </div>
               ):(
@@ -1732,7 +1852,7 @@ export default function WorkoutCounter() {
                 {workoutPlan.map((ex,ei)=>{
                   const doneSets=ex.sets.filter(s=>s.status==="done").length;
                   const isActive=ei===currentExIdx;
-                  const isDone=doneSets===(ex.isCardio?1:totalSets);
+                  const isDone=doneSets===(ex.isTimer?1:totalSets);
                   const g=getGroupMeta(ex.group);
                   return(
                     <div key={ei} className={`plan-item${isActive?" active-plan":isDone?" done-plan":""}`}>
@@ -1740,7 +1860,7 @@ export default function WorkoutCounter() {
                       <div style={{marginRight:4}}>{MUSCLE_ICONS[ex.group]?.(g.color,16)}</div>
                       <div className="plan-info">
                         <div className="plan-name">{ex.exName}</div>
-                        <div className="plan-detail">{ex.isCardio?"Cardio":`${doneSets}/${totalSets} séries`}</div>
+                        <div className="plan-detail">{ex.isTimer?`${ex.timerMinutes}min`:`${doneSets}/${totalSets} séries`}</div>
                       </div>
                       <div className={`plan-status${isDone?" done":isActive?" active":" pending"}`}>
                         {isDone?"✓ OK":isActive?"EN COURS":"—"}
@@ -1767,7 +1887,7 @@ export default function WorkoutCounter() {
               </div>
               <div className="done-stats">
                 <div className="done-stat"><div className="done-stat-val">{workoutPlan.length}</div><div className="done-stat-label">Exercices</div></div>
-                <div className="done-stat"><div className="done-stat-val">{totalSets*workoutPlan.filter(e=>!e.isCardio).length}</div><div className="done-stat-label">Séries</div></div>
+                <div className="done-stat"><div className="done-stat-val">{totalSets*workoutPlan.filter(e=>!e.isTimer).length}</div><div className="done-stat-label">Séries</div></div>
                 <div className="done-stat"><div className="done-stat-val">{totalRepsDone}</div><div className="done-stat-label">Reps</div></div>
                 <div className="done-stat"><div className="done-stat-val">{formatDuration(sessionSeconds)}</div><div className="done-stat-label">Durée</div></div>
               </div>
@@ -1783,11 +1903,10 @@ export default function WorkoutCounter() {
                       {MUSCLE_ICONS[ex.group]?.(getGroupMeta(ex.group)?.color,14)}
                       <span>{ex.exName}</span>
                     </div>
-                    {ex.isCardio
-                      ? <span style={{color:"var(--accent)",fontSize:12}}>
-                          {ex.sets[0]?.minutes||0}:{pad(ex.sets[0]?.seconds||0)}
-                          {ex.sets[0]?.distance?` · ${ex.sets[0].distance}km`:""}
-                          {ex.sets[0]?.bpm?` · ${ex.sets[0].bpm}bpm`:""}
+                    {ex.isTimer
+                      ? <span style={{color:"var(--accent2)",fontSize:12}}>
+                          ⏱ {pad(Math.floor((ex.sets[0]?.elapsedSeconds||0)/60))}:{pad((ex.sets[0]?.elapsedSeconds||0)%60)}
+                          {" "}/ {ex.sets[0]?.durationMinutes||0}min
                         </span>
                       : <span style={{color:"var(--success)"}}>{ex.sets.reduce((a,s)=>a+(s.reps||0),0)} reps{ex.sets.some(s=>s.weight)?` · ${ex.sets.filter(s=>s.weight).map(s=>`${s.weight}${weightUnit}`).join(", ")}`:""}</span>
                     }

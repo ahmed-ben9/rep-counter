@@ -172,15 +172,6 @@ const DEFAULT_THEME = { ...PRESET_THEMES[0], wallpaperUrl: "", wallpaperOpacity:
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  UTILS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// Fix Safari : localStorage peut planter en navigation privée
-function safeGet(key, fallback = null) {
-  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
-}
-function safeSet(key, value) {
-  try { localStorage.setItem(key, value); } catch {}
-}
-
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 }
@@ -225,13 +216,13 @@ export default function WorkoutApp() {
   const [restDuration, setRestDuration] = useState(90);
 
   // ── Préférences ──
-  const [weightUnit, setWeightUnit] = useState(() => safeGet("rc-unit", "kg"));
-  const [showWeight, setShowWeight] = useState(() => safeGet("rc-showweight", "true") !== "false");
+  const [weightUnit, setWeightUnit] = useState(() => localStorage.getItem("rc-unit") || "kg");
+  const [showWeight, setShowWeight] = useState(() => localStorage.getItem("rc-showweight") !== "false");
 
   // ── Exercises data (versioned) ──
   const [exercises, setExercises] = useState(() => {
     try {
-      const saved = safeGet(EXERCISES_KEY);
+      const saved = localStorage.getItem(EXERCISES_KEY);
       if (saved) return JSON.parse(saved);
     } catch {}
     return DEFAULT_EXERCISES;
@@ -287,17 +278,17 @@ export default function WorkoutApp() {
 
   // Weekly
   const [weeklyProgram, setWeeklyProgram] = useState(() => {
-    try { return JSON.parse(safeGet("rc-weekly", "{}")); } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem("rc-weekly") || "{}"); } catch { return {}; }
   });
   const [editingDay, setEditingDay] = useState(null);
-  const [weeklyGoal, setWeeklyGoal] = useState(() => parseInt(safeGet("rc-weekly-goal", "3")));
+  const [weeklyGoal, setWeeklyGoal] = useState(() => parseInt(localStorage.getItem("rc-weekly-goal") || "3"));
 
   // Theme
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem("rc-theme");
       if (saved) return { ...DEFAULT_THEME, ...JSON.parse(saved) };
-      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? true;
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       return prefersDark ? DEFAULT_THEME : { ...PRESET_THEMES[5], wallpaperUrl: "", wallpaperOpacity: "0.15" };
     } catch { return DEFAULT_THEME; }
   });
@@ -309,9 +300,9 @@ export default function WorkoutApp() {
 
   // ── Init ──
   useEffect(() => {
-    try { setHistory(JSON.parse(safeGet("rc-history", "[]"))); } catch {}
+    try { setHistory(JSON.parse(localStorage.getItem("rc-history") || "[]")); } catch {}
     try {
-      const saved = safeGet("rc-session-backup");
+      const saved = localStorage.getItem("rc-session-backup");
       if (saved) { const s = JSON.parse(saved); if (s?.workoutPlan?.length > 0) setResumeAvailable(true); }
     } catch {}
     if ("serviceWorker" in navigator) {
@@ -327,10 +318,9 @@ export default function WorkoutApp() {
 
   // Auto dark/light
   useEffect(() => {
-    if (!window.matchMedia) return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = e => {
-      if (!safeGet("rc-theme"))
+      if (!localStorage.getItem("rc-theme"))
         setTheme(e.matches ? DEFAULT_THEME : { ...PRESET_THEMES[5], wallpaperUrl: "", wallpaperOpacity: "0.15" });
     };
     mq.addEventListener("change", handler);
@@ -431,11 +421,9 @@ export default function WorkoutApp() {
   // Sauvegarde auto séance
   useEffect(() => {
     if (step === "workout" && workoutPlan.length > 0) {
-      try {
-        localStorage.setItem("rc-session-backup", JSON.stringify({
-          workoutPlan, currentExIdx, currentSetIdx, selectedGroups, totalSets, targetReps, sessionSeconds
-        }));
-      } catch {}
+      localStorage.setItem("rc-session-backup", JSON.stringify({
+        workoutPlan, currentExIdx, currentSetIdx, selectedGroups, totalSets, targetReps, sessionSeconds
+      }));
     }
   }, [workoutPlan, currentExIdx, currentSetIdx, sessionSeconds]); // eslint-disable-line
 
@@ -468,10 +456,10 @@ export default function WorkoutApp() {
   const isStretchGroup = id => id === "etirement";
   const isCardioGroup  = id => id === "cardio";
 
-  function saveHistory(h)   { try { localStorage.setItem("rc-history", JSON.stringify(h)); } catch {} setHistory(h); }
-  function saveTheme(t)     { try { localStorage.setItem("rc-theme", JSON.stringify(t)); } catch {} setTheme(t); }
-  function saveExercises(e) { try { localStorage.setItem(EXERCISES_KEY, JSON.stringify(e)); } catch {} setExercises(e); }
-  function saveWeekly(w)    { try { localStorage.setItem("rc-weekly", JSON.stringify(w)); } catch {} setWeeklyProgram(w); }
+  function saveHistory(h)   { localStorage.setItem("rc-history", JSON.stringify(h)); setHistory(h); }
+  function saveTheme(t)     { localStorage.setItem("rc-theme", JSON.stringify(t)); setTheme(t); }
+  function saveExercises(e) { localStorage.setItem(EXERCISES_KEY, JSON.stringify(e)); setExercises(e); }
+  function saveWeekly(w)    { localStorage.setItem("rc-weekly", JSON.stringify(w)); setWeeklyProgram(w); }
 
   function getLastWeight(exName, setIdx) {
     for (const session of history) {
@@ -552,7 +540,7 @@ export default function WorkoutApp() {
 
   function resumeWorkout() {
     try {
-      const saved = JSON.parse(safeGet("rc-session-backup", "null"));
+      const saved = JSON.parse(localStorage.getItem("rc-session-backup") || "null");
       if (!saved) return;
       setWorkoutPlan(saved.workoutPlan || []);
       setCurrentExIdx(saved.currentExIdx || 0);
@@ -568,7 +556,7 @@ export default function WorkoutApp() {
       setStep("workout");
     } catch {}
   }
-  function dismissResume() { try { localStorage.removeItem("rc-session-backup"); } catch {} setResumeAvailable(false); }
+  function dismissResume() { localStorage.removeItem("rc-session-backup"); setResumeAvailable(false); }
 
   // ── Repos ──
   const finishRest = useCallback(() => {
@@ -691,7 +679,7 @@ export default function WorkoutApp() {
   function finishWorkout(plan) {
     setSessionTimerActive(false);
     clearInterval(exTimerRef.current);
-    try { localStorage.removeItem("rc-session-backup"); } catch {}
+    localStorage.removeItem("rc-session-backup");
     setResumeAvailable(false);
     const finalSecs = sessionBaseRef.current + (sessionStartRef.current ? Math.floor((Date.now() - sessionStartRef.current) / 1000) : 0);
     const totalRepsDone = plan.filter(e => !e.isTimer).reduce((acc, ex) => acc + ex.sets.reduce((a, s) => a + (s.reps || 0), 0), 0);
@@ -736,7 +724,7 @@ export default function WorkoutApp() {
     setShowSettings(false); setShowStats(false); setShowWeekly(false);
     setSessionTimerActive(false); setSessionSeconds(0);
     sessionStartRef.current = null; pendingNextRef.current = null; pendingSessionRef.current = null;
-    try { localStorage.removeItem("rc-session-backup"); } catch {}
+    localStorage.removeItem("rc-session-backup");
   }
 
   // ── Settings ──
@@ -868,7 +856,7 @@ export default function WorkoutApp() {
       --text:${theme.text};--muted:${theme.muted};--success:${theme.success};
     }
     body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
-    .app{min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;position:relative;}
+    .app{min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:max(env(safe-area-inset-top),24px) 16px max(env(safe-area-inset-bottom),60px);position:relative;}
     ${theme.wallpaperUrl ? `.app::before{content:'';position:fixed;inset:0;z-index:0;background-image:url('${theme.wallpaperUrl}');background-size:cover;background-position:center;opacity:${theme.wallpaperOpacity};pointer-events:none;}` : ""}
     .app>*{position:relative;z-index:1;}
 
@@ -1018,7 +1006,7 @@ export default function WorkoutApp() {
     .note-area::placeholder{color:var(--muted);}
 
     /* Repos */
-    .rest-overlay{position:fixed;inset:0;z-index:100;background:rgba(5,5,5,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;animation:fadeIn 0.2s ease;}
+    .rest-overlay{position:fixed;inset:0;z-index:100;background:rgba(5,5,5,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(env(safe-area-inset-top),32px) 24px max(env(safe-area-inset-bottom),32px);animation:fadeIn 0.2s ease;}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
     .ex-slide-in{animation:slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94);}
@@ -1076,7 +1064,7 @@ export default function WorkoutApp() {
 
     /* Paramètres */
     .settings-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease;}
-    .settings-panel{background:#111;border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:24px 20px 40px;}
+    .settings-panel{background:#111;border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:24px 20px max(env(safe-area-inset-bottom),40px);}
     .settings-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
     .settings-title{font-family:'Bebas Neue',sans-serif;font-size:28px;margin-bottom:16px;}
     .settings-tabs{display:flex;gap:5px;margin-bottom:20px;flex-wrap:wrap;}
@@ -1125,7 +1113,7 @@ export default function WorkoutApp() {
 
     /* Stats */
     .stats-overlay{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,0.9);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease;}
-    .stats-panel{background:#111;border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:24px 20px 40px;}
+    .stats-panel{background:#111;border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:24px 20px max(env(safe-area-inset-bottom),40px);}
     .stats-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
     .stats-filter-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
     .stats-filter-btn.active{border-color:var(--accent);color:var(--accent);}
@@ -1350,9 +1338,9 @@ export default function WorkoutApp() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "10px 0 16px" }}>
             <div style={{ fontSize: 11, color: "var(--muted)" }}>Objectif hebdo :</div>
             <div className="stepper">
-              <button className="stepper-btn" onClick={() => { const g = Math.max(1, weeklyGoal - 1); try { localStorage.setItem("rc-weekly-goal", String(g)); } catch {} setWeeklyGoal(g); }}>−</button>
+              <button className="stepper-btn" onClick={() => { const g = Math.max(1, weeklyGoal - 1); localStorage.setItem("rc-weekly-goal", String(g)); setWeeklyGoal(g); }}>−</button>
               <div className="stepper-val">{weeklyGoal}</div>
-              <button className="stepper-btn" onClick={() => { const g = Math.min(14, weeklyGoal + 1); try { localStorage.setItem("rc-weekly-goal", String(g)); } catch {} setWeeklyGoal(g); }}>+</button>
+              <button className="stepper-btn" onClick={() => { const g = Math.min(14, weeklyGoal + 1); localStorage.setItem("rc-weekly-goal", String(g)); setWeeklyGoal(g); }}>+</button>
             </div>
           </div>
           <div className="weekly-grid">
@@ -1541,7 +1529,7 @@ export default function WorkoutApp() {
                 <div className="toggle-row">
                   <div className="toggle-label">Afficher le poids</div>
                   <label className="toggle">
-                    <input type="checkbox" checked={showWeight} onChange={e => { setShowWeight(e.target.checked); try { localStorage.setItem("rc-showweight", e.target.checked); } catch {} }} />
+                    <input type="checkbox" checked={showWeight} onChange={e => { setShowWeight(e.target.checked); localStorage.setItem("rc-showweight", e.target.checked); }} />
                     <span className="toggle-slider" />
                   </label>
                 </div>
@@ -1549,7 +1537,7 @@ export default function WorkoutApp() {
                 <div className="unit-row">
                   {["kg", "lbs"].map(u => (
                     <button key={u} className={`unit-btn${weightUnit === u ? " active" : ""}`}
-                      onClick={() => { setWeightUnit(u); try { localStorage.setItem("rc-unit", u); } catch {} }}>
+                      onClick={() => { setWeightUnit(u); localStorage.setItem("rc-unit", u); }}>
                       {u}
                     </button>
                   ))}

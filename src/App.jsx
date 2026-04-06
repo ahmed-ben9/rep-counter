@@ -260,6 +260,7 @@ export default function WorkoutApp() {
   const restEndRef    = useRef(null);
   const restIntervalRef = useRef(null);
   const pendingNextRef  = useRef(null);
+  const restBgTimerRef  = useRef(null);
 
   // History
   const [history, setHistory]         = useState([]);
@@ -452,6 +453,27 @@ export default function WorkoutApp() {
 
   // ── Helpers ──
   const getGroupMeta  = id => DEFAULT_MUSCLE_GROUPS.find(g => g.id === id);
+
+  // ── Notification iOS : timer JS fallback ──
+  function scheduleRestNotification(duration) {
+    if (restBgTimerRef.current) clearTimeout(restBgTimerRef.current);
+    if (swRef.current?.active) {
+      swRef.current.active.postMessage({ type: "START_REST", payload: { duration } });
+    }
+    restBgTimerRef.current = setTimeout(() => {
+      if (document.visibilityState === "visible") {
+        playRestEndSound(); setRestAlert(true); return;
+      }
+      if ("Notification" in window && Notification.permission === "granted") {
+        try { new Notification("💥 C'EST PARTI !", { body: "Repos terminé — reprends la série !", icon: "/icon-192.png", tag: "rest-done" }); } catch {}
+      }
+      setRestAlert(true);
+    }, duration * 1000);
+  }
+  function cancelRestNotification() {
+    if (restBgTimerRef.current) { clearTimeout(restBgTimerRef.current); restBgTimerRef.current = null; }
+    if (swRef.current?.active) swRef.current.active.postMessage({ type: "CANCEL_REST" });
+  }
   const isTimerGroup  = id => getGroupMeta(id)?.isTimer || false;
   const isStretchGroup = id => id === "etirement";
   const isCardioGroup  = id => id === "cardio";
@@ -563,11 +585,11 @@ export default function WorkoutApp() {
     setRestAlert(false);
     setShowRest(false);
     clearInterval(restIntervalRef.current);
-    if (swRef.current?.active) swRef.current.active.postMessage({ type: "CANCEL_REST" });
+    cancelRestNotification();
     const fn = pendingNextRef.current;
     pendingNextRef.current = null;
     if (fn) fn();
-  }, []);
+  }, []); // eslint-disable-line
 
   // Quand l'alerte est affichée et qu'on finit le repos auto
   useEffect(() => {
@@ -582,9 +604,7 @@ export default function WorkoutApp() {
     setRestRemaining(restDuration);
     setRestPaused(false);
     setShowRest(true);
-    if (swRef.current?.active) {
-      swRef.current.active.postMessage({ type: "START_REST", payload: { duration: restDuration } });
-    }
+    scheduleRestNotification(restDuration);
   }
   function changeRestDuration(d) {
     setRestDuration(d);
@@ -715,6 +735,7 @@ export default function WorkoutApp() {
     clearInterval(exTimerRef.current);
     clearInterval(restIntervalRef.current);
     clearInterval(sessionTimerRef.current);
+    cancelRestNotification();
     setStep("groups"); setSelectedGroups([]); setSelectedExercises([]);
     setTotalSets(3); setTargetReps(10); setRestDuration(90);
     setWorkoutPlan([]); setCurrentExIdx(0); setCurrentSetIdx(0);
@@ -856,15 +877,15 @@ export default function WorkoutApp() {
       --text:${theme.text};--muted:${theme.muted};--success:${theme.success};
     }
     body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
-    .app{min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:max(env(safe-area-inset-top),24px) 16px max(env(safe-area-inset-bottom),60px);position:relative;}
+    .app{min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:max(env(safe-area-inset-top),16px) 16px max(env(safe-area-inset-bottom),60px);position:relative;}
     ${theme.wallpaperUrl ? `.app::before{content:'';position:fixed;inset:0;z-index:0;background-image:url('${theme.wallpaperUrl}');background-size:cover;background-position:center;opacity:${theme.wallpaperOpacity};pointer-events:none;}` : ""}
     .app>*{position:relative;z-index:1;}
 
-    .header{width:100%;max-width:420px;margin-bottom:20px;display:flex;align-items:flex-start;justify-content:space-between;}
+    .header{width:100%;max-width:420px;margin-bottom:10px;display:flex;align-items:flex-start;justify-content:space-between;}
     .header-label{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
-    .header-title{font-family:'Bebas Neue',sans-serif;font-size:48px;line-height:1;color:var(--text);}
+    .header-title{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;color:var(--text);}
     .header-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
-    .icon-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:1px solid var(--border);border-radius:10px;padding:7px 10px;color:var(--muted);cursor:pointer;font-size:10px;font-family:'DM Sans',sans-serif;transition:all 0.13s;}
+    .icon-btn{display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:1px solid var(--border);border-radius:10px;padding:6px 9px;color:var(--muted);cursor:pointer;font-size:10px;font-family:'DM Sans',sans-serif;transition:all 0.13s;}
     .icon-btn:hover{border-color:#444;color:var(--text);}
     .icon-btn.active{border-color:var(--accent);color:var(--accent);}
     .icon-btn .ib-icon{font-size:14px;}
@@ -939,7 +960,7 @@ export default function WorkoutApp() {
     .validate-btn{width:100%;height:56px;border-radius:12px;border:2px solid var(--success);background:transparent;color:var(--success);font-family:'Bebas Neue',sans-serif;font-size:18px;cursor:pointer;}
     .validate-btn:disabled{opacity:0.25;cursor:not-allowed;border-color:var(--muted);color:var(--muted);}
 
-    .step-nav{display:flex;gap:6px;margin-bottom:20px;width:100%;max-width:420px;}
+    .step-nav{display:flex;gap:6px;margin-bottom:10px;width:100%;max-width:420px;}
     .step-pip{height:3px;flex:1;border-radius:2px;background:var(--border);}
     .step-pip.done-pip{background:var(--success);}
     .step-pip.active-pip{background:var(--accent);}
@@ -1006,7 +1027,7 @@ export default function WorkoutApp() {
     .note-area::placeholder{color:var(--muted);}
 
     /* Repos */
-    .rest-overlay{position:fixed;inset:0;z-index:100;background:rgba(5,5,5,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(env(safe-area-inset-top),32px) 24px max(env(safe-area-inset-bottom),32px);animation:fadeIn 0.2s ease;}
+    .rest-overlay{position:fixed;inset:0;z-index:100;background:rgba(5,5,5,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;animation:fadeIn 0.2s ease;}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
     .ex-slide-in{animation:slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94);}
@@ -1064,7 +1085,7 @@ export default function WorkoutApp() {
 
     /* Paramètres */
     .settings-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.85);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease;}
-    .settings-panel{background:#111;border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:24px 20px max(env(safe-area-inset-bottom),40px);}
+    .settings-panel{background:#111;border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:24px 20px 40px;}
     .settings-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
     .settings-title{font-family:'Bebas Neue',sans-serif;font-size:28px;margin-bottom:16px;}
     .settings-tabs{display:flex;gap:5px;margin-bottom:20px;flex-wrap:wrap;}
@@ -1113,7 +1134,7 @@ export default function WorkoutApp() {
 
     /* Stats */
     .stats-overlay{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,0.9);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn 0.2s ease;}
-    .stats-panel{background:#111;border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:24px 20px max(env(safe-area-inset-bottom),40px);}
+    .stats-panel{background:#111;border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:24px 20px 40px;}
     .stats-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
     .stats-filter-btn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
     .stats-filter-btn.active{border-color:var(--accent);color:var(--accent);}
@@ -1639,11 +1660,6 @@ export default function WorkoutApp() {
         {/* Progression workout */}
         {step === "workout" && (
           <>
-            <div className="session-timer">
-              <span className="timer-icon">⏱️</span>
-              <span className="timer-label">Durée de la séance</span>
-              <span className="timer-val">{formatDuration(sessionSeconds)}</span>
-            </div>
             {totalMuscleSets > 0 && (
               <div className="workout-progress">
                 <div className="wp-header">
@@ -1690,42 +1706,46 @@ export default function WorkoutApp() {
         {/* ── ÉTAPE : EXERCICES ── */}
         {step === "exercises" && (
           <>
-            <div className="card">
-              <div className="section-title">Exercices · {selectedExercises.length} sélectionné{selectedExercises.length > 1 ? "s" : ""}</div>
-              {selectedGroups.map((groupId, gi) => {
-                const g = getGroupMeta(groupId);
-                const allEx = (exercises[groupId] || []).map(normEx);
-                return (
-                  <div key={groupId} style={{ marginBottom: gi < selectedGroups.length - 1 ? 20 : 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <MuscleIcon groupId={groupId} color={g.color} size={20} />
-                      <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: g.color }}>{g.label}</span>
-                      {g.isTimer && <span style={{ fontSize: 10, background: g.color + "20", color: g.color, borderRadius: 4, padding: "2px 6px", border: `1px solid ${g.color}40` }}>⏱ TIMER</span>}
-                    </div>
-                    <div className="ex-list">
-                      {allEx.map((ex) => {
-                        const isSelected = selectedExercises.some(e => e.name === ex.name && e.group === groupId);
-                        return (
-                          <div key={ex.name} className={`ex-item${isSelected ? " selected" : ""}`}
-                            onClick={() => toggleExercise({ name: ex.name, muscle: ex.muscle, group: groupId })}>
-                            <div className="ex-item-dot" />
-                            <div className="ex-item-info">
-                              <div className="ex-item-label">{ex.name}</div>
-                              {ex.muscle && <div className="ex-item-muscle">{ex.muscle}</div>}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 420 }}>
-              <button className="reset-btn" style={{ flex: 1 }} onClick={() => setStep("groups")}>← Retour</button>
-              <button className="start-btn" style={{ flex: 3, marginTop: 0 }} disabled={selectedExercises.length === 0} onClick={() => setStep("config")}>
-                CONFIGURER ({selectedExercises.length}) →
-              </button>
+            <div style={{ width:"100%", maxWidth:420, flex:1, display:"flex", flexDirection:"column", minHeight:0 }}>
+              <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", paddingBottom:8 }}>
+                <div className="card" style={{ marginBottom:8 }}>
+                  <div className="section-title">Exercices · {selectedExercises.length} sélectionné{selectedExercises.length > 1 ? "s" : ""}</div>
+                  {selectedGroups.map((groupId, gi) => {
+                    const g = getGroupMeta(groupId);
+                    const allEx = (exercises[groupId] || []).map(normEx);
+                    return (
+                      <div key={groupId} style={{ marginBottom: gi < selectedGroups.length - 1 ? 20 : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                          <MuscleIcon groupId={groupId} color={g.color} size={20} />
+                          <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: g.color }}>{g.label}</span>
+                          {g.isTimer && <span style={{ fontSize: 10, background: g.color + "20", color: g.color, borderRadius: 4, padding: "2px 6px", border: `1px solid ${g.color}40` }}>⏱ TIMER</span>}
+                        </div>
+                        <div className="ex-list">
+                          {allEx.map((ex) => {
+                            const isSelected = selectedExercises.some(e => e.name === ex.name && e.group === groupId);
+                            return (
+                              <div key={ex.name} className={`ex-item${isSelected ? " selected" : ""}`}
+                                onClick={() => toggleExercise({ name: ex.name, muscle: ex.muscle, group: groupId })}>
+                                <div className="ex-item-dot" />
+                                <div className="ex-item-info">
+                                  <div className="ex-item-label">{ex.name}</div>
+                                  {ex.muscle && <div className="ex-item-muscle">{ex.muscle}</div>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ paddingTop:8, display:"flex", gap:10 }}>
+                <button className="reset-btn" style={{ flex: 1 }} onClick={() => setStep("groups")}>← Retour</button>
+                <button className="start-btn" style={{ flex: 3, marginTop: 0 }} disabled={selectedExercises.length === 0} onClick={() => setStep("config")}>
+                  CONFIGURER ({selectedExercises.length}) →
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -1962,20 +1982,24 @@ export default function WorkoutApp() {
                         onClick={() => { unlockAudio(); setRepInput(String(n)); }}>{n}</button>
                     ))}
                   </div>
-                  <div className={`rep-display-val${repInput ? " has-val" : ""}`}>{repInput || "—"}</div>
-                  <div className="rep-numpad">
-                    {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map(n => (
-                      <button key={n} className="np-btn" onClick={() => {
-                        unlockAudio();
-                        setRepInput(prev => { const next = prev + n; return parseInt(next) > 999 ? prev : next; });
-                      }}>{n}</button>
-                    ))}
-                    <button className="np-btn zero" onClick={() => {
-                      unlockAudio();
-                      setRepInput(prev => { const next = prev + "0"; return parseInt(next) > 999 ? prev : next; });
-                    }}>0</button>
-                    <button className="np-btn del" onClick={() => { unlockAudio(); setRepInput(prev => prev.slice(0, -1)); }}>⌫</button>
-                  </div>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="Autre..."
+                    min="0"
+                    max="999"
+                    value={repInput}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v === "" || (parseInt(v) >= 0 && parseInt(v) <= 999)) { unlockAudio(); setRepInput(v); }
+                    }}
+                    style={{
+                      width:"100%", background:inputBg, border:`2px solid ${repInput?"var(--accent)":"var(--border)"}`,
+                      borderRadius:12, color:"var(--text)", fontFamily:"'Bebas Neue',sans-serif",
+                      fontSize:52, textAlign:"center", height:72, outline:"none", padding:"0 10px",
+                      marginBottom:10, display:"block"
+                    }}
+                  />
                   <button className="validate-btn" onClick={validateSet} disabled={!repInput || parseInt(repInput) === 0}>
                     ✓ VALIDER · LANCER LE REPOS
                   </button>

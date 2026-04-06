@@ -3,7 +3,7 @@
 //  Gère le timer de repos en arrière-plan + notifications
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const CACHE_NAME = "rep-counter-v6";
+const CACHE_NAME = "rep-counter-v7";
 const ASSETS = ["/", "/index.html", "/manifest.json"];
 
 // ── Installation ──

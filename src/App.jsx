@@ -41,7 +41,7 @@ function MuscleCard({ groupId, color, label, selected, onClick }) {
 function MuscleSessionBanner({ groupId, color, label }) {
   const src = MUSCLE_IMAGES[groupId];
   return (
-    <div style={{ width: "100%", height: 120, borderRadius: 12, overflow: "hidden", position: "relative", marginBottom: 14, border: `1px solid ${color}40` }}>
+    <div style={{ width: "100%", height: 80, borderRadius: 10, overflow: "hidden", position: "relative", marginBottom: 8, border: `1px solid ${color}40` }}>
       <img src={src} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 60%)" }} />
       <div style={{ position: "absolute", bottom: 10, left: 14, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em", color }}>{label}</div>
@@ -903,7 +903,7 @@ export default function WorkoutApp() {
     .timer-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;flex:1;}
     .timer-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);}
 
-    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:420px;padding:20px;margin-bottom:12px;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:420px;padding:14px;margin-bottom:8px;}
     .section-title{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
 
     .group-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
@@ -957,7 +957,7 @@ export default function WorkoutApp() {
     .start-btn:disabled{opacity:0.3;cursor:not-allowed;}
     .reset-btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 18px;cursor:pointer;}
     .reset-btn:hover{border-color:var(--accent2);color:var(--accent2);}
-    .validate-btn{width:100%;height:56px;border-radius:12px;border:2px solid var(--success);background:transparent;color:var(--success);font-family:'Bebas Neue',sans-serif;font-size:18px;cursor:pointer;}
+    .validate-btn{width:100%;height:48px;border-radius:12px;border:2px solid var(--success);background:transparent;color:var(--success);font-family:'Bebas Neue',sans-serif;font-size:17px;cursor:pointer;}
     .validate-btn:disabled{opacity:0.25;cursor:not-allowed;border-color:var(--muted);color:var(--muted);}
 
     .step-nav{display:flex;gap:6px;margin-bottom:10px;width:100%;max-width:420px;}
@@ -967,35 +967,35 @@ export default function WorkoutApp() {
     .divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
 
     /* Workout */
-    .workout-ex-header{display:flex;flex-direction:column;gap:2px;margin-bottom:16px;}
+    .workout-ex-header{display:flex;flex-direction:column;gap:2px;margin-bottom:8px;}
     .workout-ex-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);}
-    .workout-ex-name{font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1.05;}
-    .workout-ex-muscle{font-size:12px;color:var(--muted);margin-top:3px;font-style:italic;}
+    .workout-ex-name{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1.05;}
+    .workout-ex-muscle{font-size:11px;color:var(--muted);margin-top:1px;font-style:italic;}
 
     /* Modifier séries en cours */
-    .inflight-sets{display:flex;align-items:center;gap:8px;padding:8px 12px;background:${planItemBg};border:1px solid var(--border);border-radius:8px;margin-bottom:12px;}
+    .inflight-sets{display:flex;align-items:center;gap:8px;padding:5px 10px;background:${planItemBg};border:1px solid var(--border);border-radius:8px;margin-bottom:6px;}
     .inflight-label{font-size:11px;color:var(--muted);flex:1;text-transform:uppercase;letter-spacing:0.08em;}
-    .inflight-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text);width:28px;height:28px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-    .inflight-val{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--accent);width:24px;text-align:center;}
+    .inflight-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text);width:26px;height:26px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .inflight-val{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--accent);width:22px;text-align:center;}
 
-    .set-track{display:flex;gap:8px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
-    .set-bubble{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:36px;}
-    .set-bubble-dot{width:12px;height:12px;border-radius:50%;border:2px solid #333;background:transparent;transition:all 0.2s;}
+    .set-track{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;}
+    .set-bubble{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:30px;}
+    .set-bubble-dot{width:10px;height:10px;border-radius:50%;border:2px solid #333;background:transparent;transition:all 0.2s;}
     .set-bubble-dot.done{background:var(--success);border-color:var(--success);}
-    .set-bubble-dot.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px var(--accent);}
-    .set-bubble-reps{font-size:10px;color:var(--muted);min-height:14px;}
+    .set-bubble-dot.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 6px var(--accent);}
+    .set-bubble-reps{font-size:9px;color:var(--muted);min-height:11px;}
     .set-bubble-reps.filled{color:var(--success);font-weight:600;}
-    .go-zone{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 0;}
-    .go-label{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);}
-    .go-serie-num{font-family:'Bebas Neue',sans-serif;font-size:68px;line-height:1;color:var(--accent);}
-    .go-target{font-size:13px;color:var(--muted);}
+    .go-zone{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;}
+    .go-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);}
+    .go-serie-num{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:1;color:var(--accent);}
+    .go-target{font-size:12px;color:var(--muted);}
     .go-target span{color:var(--text);font-weight:600;}
 
-    .quick-reps{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
-    .qr-btn{flex:1;min-width:44px;height:42px;border-radius:8px;border:1px solid var(--border);background:${planItemBg};color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:18px;cursor:pointer;transition:all 0.1s;}
+    .quick-reps{display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap;}
+    .qr-btn{flex:1;min-width:40px;height:38px;border-radius:8px;border:1px solid var(--border);background:${planItemBg};color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:17px;cursor:pointer;transition:all 0.1s;}
     .qr-btn:active{transform:scale(0.93);}
     .qr-btn.selected-qr{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);}
-    .rep-entry-label{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;text-align:center;}
+    .rep-entry-label{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;text-align:center;}
     .rep-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
     .np-btn{height:56px;border-radius:10px;border:1px solid var(--border);background:${inputBg};color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:24px;cursor:pointer;}
     .np-btn:active{transform:scale(0.95);}
@@ -1004,22 +1004,22 @@ export default function WorkoutApp() {
     .rep-display-val{font-family:'Bebas Neue',sans-serif;font-size:76px;line-height:1;text-align:center;color:var(--muted);margin-bottom:8px;}
     .rep-display-val.has-val{color:var(--accent);}
 
-    .weight-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;background:${planItemBg};border-radius:10px;border:1px solid var(--border);}
-    .weight-label{font-size:12px;color:var(--muted);flex:1;}
-    .weight-input{background:${inputBg};border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:20px;text-align:center;width:90px;height:40px;outline:none;padding:0 10px;}
+    .weight-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;background:${planItemBg};border-radius:8px;border:1px solid var(--border);}
+    .weight-label{font-size:11px;color:var(--muted);flex:1;}
+    .weight-input{background:${inputBg};border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Bebas Neue',sans-serif;font-size:18px;text-align:center;width:80px;height:34px;outline:none;padding:0 8px;}
     .weight-input:focus{border-color:var(--accent);}
-    .weight-hint{font-size:11px;color:var(--accent);font-weight:600;}
-    .weight-unit{font-size:13px;color:var(--muted);}
+    .weight-hint{font-size:10px;color:var(--accent);font-weight:600;}
+    .weight-unit{font-size:12px;color:var(--muted);}
 
     /* Timer exercice */
-    .ex-timer-zone{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 0;}
-    .side-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:4px;}
-    .timer-presets{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:4px;}
-    .timer-preset-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;}
+    .ex-timer-zone{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 0;}
+    .side-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-bottom:2px;}
+    .timer-presets{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:2px;}
+    .timer-preset-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;}
     .timer-preset-btn.active-tp{border-color:var(--accent2);color:var(--accent2);}
-    .play-btn{width:64px;height:64px;border-radius:50%;border:2px solid currentColor;background:transparent;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .play-btn{width:56px;height:56px;border-radius:50%;border:2px solid currentColor;background:transparent;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 
-    .record-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(255,204,0,0.12);border:1px solid #ffcc00;border-radius:20px;font-size:12px;color:#ffcc00;font-weight:600;margin-bottom:12px;animation:pulse 1.5s ease infinite;}
+    .record-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(255,204,0,0.12);border:1px solid #ffcc00;border-radius:20px;font-size:11px;color:#ffcc00;font-weight:600;margin-bottom:4px;animation:pulse 1.5s ease infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
 
     .note-area{width:100%;background:${inputBg};border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:12px 14px;outline:none;resize:vertical;min-height:80px;margin-top:8px;}
@@ -1995,9 +1995,9 @@ export default function WorkoutApp() {
                     }}
                     style={{
                       width:"100%", background:inputBg, border:`2px solid ${repInput?"var(--accent)":"var(--border)"}`,
-                      borderRadius:12, color:"var(--text)", fontFamily:"'Bebas Neue',sans-serif",
-                      fontSize:52, textAlign:"center", height:72, outline:"none", padding:"0 10px",
-                      marginBottom:10, display:"block"
+                      borderRadius:10, color:"var(--text)", fontFamily:"'Bebas Neue',sans-serif",
+                      fontSize:44, textAlign:"center", height:58, outline:"none", padding:"0 10px",
+                      marginBottom:8, display:"block"
                     }}
                   />
                   <button className="validate-btn" onClick={validateSet} disabled={!repInput || parseInt(repInput) === 0}>

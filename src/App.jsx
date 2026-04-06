@@ -314,7 +314,10 @@ export default function WorkoutApp() {
         if (e.data?.type === "REST_DONE") setRestAlert(true);
       });
     }
-    if ("Notification" in window) setNotifPermission(Notification.permission);
+    if ("Notification" in window) {
+      setNotifPermission(Notification.permission);
+      if (Notification.permission === "granted") subscribeToPush();
+    }
   }, []);
 
   // Auto dark/light
@@ -455,18 +458,55 @@ export default function WorkoutApp() {
   const getGroupMeta  = id => DEFAULT_MUSCLE_GROUPS.find(g => g.id === id);
 
   // ── Notification iOS : timer JS fallback ──
+  // ── Subscription Web Push ──
+  const pushSubRef = useRef(null);
+
+  async function subscribeToPush() {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) { pushSubRef.current = existing; return; }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array("BChtraqOgwGva8QCFJjPLcnJDgAfefkFafumgCrfFZ9ZHK_qEbJ4JIXFWDzVEjFgL8d1BxGXgjMLNoTjJI7KCsg")
+      });
+      pushSubRef.current = sub;
+      await fetch("/api/save-subscription", {
+        method: "POST",
+        body: JSON.stringify(sub),
+        headers: { "Content-Type": "application/json" }
+      });
+    } catch {}
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
   function scheduleRestNotification(duration) {
     if (restBgTimerRef.current) clearTimeout(restBgTimerRef.current);
     if (swRef.current?.active) {
       swRef.current.active.postMessage({ type: "START_REST", payload: { duration } });
     }
-    restBgTimerRef.current = setTimeout(() => {
+    // Timer JS : envoie la notif via API au bout de `duration` secondes
+    restBgTimerRef.current = setTimeout(async () => {
       if (document.visibilityState === "visible") {
         playRestEndSound(); setRestAlert(true); return;
       }
-      if ("Notification" in window && Notification.permission === "granted") {
-        try { new Notification("💥 C'EST PARTI !", { body: "Repos terminé — reprends la série !", icon: "/icon-192.png", tag: "rest-done" }); } catch {}
-      }
+      // Envoie via API → Upstash → Web Push (fonctionne même app en arrière-plan)
+      try {
+        await fetch("/api/send-notification", {
+          method: "POST",
+          body: JSON.stringify({ title: "💥 C'EST PARTI !", body: "Repos terminé — reprends la série !" }),
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch {}
       setRestAlert(true);
     }, duration * 1000);
   }
@@ -1648,7 +1688,7 @@ export default function WorkoutApp() {
         {/* Notification */}
         {"Notification" in window && notifPermission !== "granted" && notifPermission !== "denied" && step === "groups" && (
           <div className="resume-banner" style={{ borderColor: "#ff9800", background: "rgba(255,152,0,0.1)" }}
-            onClick={() => Notification.requestPermission().then(p => setNotifPermission(p))}>
+            onClick={() => Notification.requestPermission().then(p => { setNotifPermission(p); if (p === "granted") subscribeToPush(); })}>
             <span style={{ fontSize: 20 }}>🔔</span>
             <div className="resume-text" style={{ color: "var(--text)" }}>
               <strong style={{ color: "#ff9800" }}>Activer les notifications</strong> — alerte fin de repos en arrière-plan.
